@@ -1,0 +1,12 @@
+# Linked project: edorsmasowlidwftzqnh
+project_id = "edorsmasowlidwftzqnh"
+
+[auth]
+site_url = "rvanow://auth-callback"
+additional_redirect_urls = [
+  "rvanow://auth-callback",
+  "rvanow://auth",
+  "exp://**",
+  "exp://**/--/auth-callback",
+  "exp://**/--/auth",
+]

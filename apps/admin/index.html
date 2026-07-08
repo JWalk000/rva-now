@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RVA Now — Admin</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: #f7f4ee; color: #1a1a1a; }
+      header { padding: 24px; background: #fff; border-bottom: 1px solid #e8e2d8; }
+      h1 { margin: 0 0 8px; }
+      main { padding: 24px; display: grid; gap: 20px; max-width: 1100px; margin: 0 auto; }
+      .card { background: #fff; border: 1px solid #e8e2d8; border-radius: 16px; padding: 20px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+      input, button, select { padding: 10px 14px; border-radius: 10px; border: 1px solid #e8e2d8; font-size: 14px; }
+      button { background: #2d6a4f; color: #fff; border: none; cursor: pointer; font-weight: 700; }
+      button.secondary { background: #fff; color: #1a1a1a; border: 1px solid #e8e2d8; }
+      button.danger { background: #b00020; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #efebe3; vertical-align: top; }
+      .muted { color: #6b6560; font-size: 13px; }
+      .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #d8f3dc; color: #2d6a4f; }
+      .badge.pending { background: #fff3cd; color: #856404; }
+      .badge.rejected { background: #f8d7da; color: #721c24; }
+      #log { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; background: #efebe3; padding: 12px; border-radius: 10px; max-height: 200px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>RVA Now Admin</h1>
+      <p class="muted">Moderate submissions · trigger sync · view ingestion logs</p>
+      <div class="row">
+        <input id="supabaseUrl" placeholder="Supabase URL" style="flex:1;min-width:240px" value="https://edorsmasowlidwftzqnh.supabase.co" />
+        <input id="anonKey" placeholder="Anon key" style="flex:1;min-width:240px" />
+        <input id="adminSecret" placeholder="ADMIN_SECRET" style="min-width:160px" />
+        <button onclick="loadAll()">Connect</button>
+      </div>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Pending submissions</h2>
+        <table id="submissionsTable"><tr><th>Title</th><th>Email</th><th>Tier</th><th>Status</th><th></th></tr></table>
+      </section>
+      <section class="card">
+        <h2>Sync & maintenance</h2>
+        <div class="row">
+          <button onclick="trigger('sync-events')">Run Posh/Eventbrite sync</button>
+          <button onclick="trigger('archive-stale-events')" class="secondary">Archive stale events</button>
+          <button onclick="trigger('send-digest')" class="secondary">Send weekly digest</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Recent sync runs</h2>
+        <table id="syncTable"><tr><th>Platform</th><th>Inserted</th><th>Skipped</th><th>Errors</th><th>When</th></tr></table>
+      </section>
+      <section class="card">
+        <h2>Organizer lookup</h2>
+        <div class="row">
+          <input id="organizerEmail" placeholder="organizer@email.com" />
+          <button onclick="lookupOrganizer()" class="secondary">Find submissions</button>
+        </div>
+        <div id="organizerResults" class="muted"></div>
+      </section>
+      <section class="card">
+        <h2>Log</h2>
+        <div id="log"></div>
+      </section>
+    </main>
+    <script src="./credentials.local.js"></script>
+    <script>
+      const log = (msg) => { document.getElementById('log').textContent = `${new Date().toLocaleTimeString()} ${msg}\n` + document.getElementById('log').textContent; };
+      const cfg = () => ({
+        url: document.getElementById('supabaseUrl').value.replace(/\/$/, ''),
+        key: document.getElementById('anonKey').value,
+        secret: document.getElementById('adminSecret').value,
+      });
+
+      async function sb(path, opts = {}) {
+        const { url, key } = cfg();
+        const res = await fetch(`${url}/rest/v1/${path}`, {
+          ...opts,
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            ...(opts.headers || {}),
+          },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.status === 204 ? null : res.json();
+      }
+
+      async function loadAll() {
+        try {
+          const subs = await sb('event_submissions?select=*&order=created_at.desc&limit=50');
+          const tbody = document.getElementById('submissionsTable');
+          tbody.innerHTML = '<tr><th>Title</th><th>Email</th><th>Tier</th><th>Status</th><th></th></tr>';
+          subs.forEach((s) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${s.title}</td><td>${s.email}</td><td>${s.tier}</td><td><span class="badge ${s.status}">${s.status}</span></td><td></td>`;
+            if (s.status === 'pending') {
+              const approve = document.createElement('button');
+              approve.textContent = 'Approve';
+              approve.onclick = () => moderate(s.id, 'approve');
+              const reject = document.createElement('button');
+              reject.textContent = 'Reject';
+              reject.className = 'danger';
+              reject.onclick = () => moderate(s.id, 'reject');
+              tr.lastElementChild.append(approve, reject);
+            }
+            tbody.appendChild(tr);
+          });
+
+          const runs = await sb('sync_runs?select=*&order=started_at.desc&limit=10');
+          const syncBody = document.getElementById('syncTable');
+          syncBody.innerHTML = '<tr><th>Platform</th><th>Inserted</th><th>Skipped</th><th>Errors</th><th>When</th></tr>';
+          (runs || []).forEach((r) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${r.source_platform}</td><td>${r.inserted_count}</td><td>${r.skipped_duplicates}</td><td>${r.error_count}</td><td>${new Date(r.started_at).toLocaleString()}</td>`;
+            syncBody.appendChild(tr);
+          });
+          log('Loaded submissions and sync runs');
+        } catch (e) { log('Error: ' + e.message); }
+      }
+
+      async function moderate(id, action) {
+        const { url, secret } = cfg();
+        const res = await fetch(`${url}/functions/v1/approve-submission`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify({ submission_id: id, action }),
+        });
+        const json = await res.json();
+        log(`${action} ${id}: ${JSON.stringify(json)}`);
+        loadAll();
+      }
+
+      async function trigger(fn) {
+        const { url, secret } = cfg();
+        const header = fn === 'approve-submission' ? 'x-admin-secret' : 'x-sync-secret';
+        const res = await fetch(`${url}/functions/v1/${fn}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', [header]: secret },
+          body: '{}',
+        });
+        log(`${fn}: ${await res.text()}`);
+        loadAll();
+      }
+
+      async function lookupOrganizer() {
+        const email = document.getElementById('organizerEmail').value;
+        const subs = await sb(`event_submissions?select=*&email=eq.${encodeURIComponent(email)}`);
+        document.getElementById('organizerResults').innerHTML = (subs || []).map((s) =>
+          `<div>${s.title} — <span class="badge ${s.status}">${s.status}</span> · ${s.tier} · payment: ${s.payment_status || 'n/a'}</div>`
+        ).join('') || 'No submissions found';
+      }
+
+      function saveCfg() {
+        const { url, key, secret } = cfg();
+        localStorage.setItem('rva-admin-url', url);
+        localStorage.setItem('rva-admin-key', key);
+        localStorage.setItem('rva-admin-secret', secret);
+      }
+
+      (function restoreCfg() {
+        const local = window.RVA_ADMIN || {};
+        const savedUrl = localStorage.getItem('rva-admin-url') || local.url;
+        const savedKey = localStorage.getItem('rva-admin-key') || local.key;
+        const savedSecret = localStorage.getItem('rva-admin-secret') || local.secret;
+        if (savedUrl) document.getElementById('supabaseUrl').value = savedUrl;
+        if (savedKey) document.getElementById('anonKey').value = savedKey;
+        if (savedSecret) document.getElementById('adminSecret').value = savedSecret;
+        if (savedKey && savedSecret) {
+          saveCfg();
+          loadAll();
+        }
+      })();
+
+      const connectBtn = document.querySelector('header button');
+      connectBtn.addEventListener('click', saveCfg);
+    </script>
+  </body>
+</html>
