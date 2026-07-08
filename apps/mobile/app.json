@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "RVA Now",
+    "slug": "rva-now",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "rvanow",
+    "userInterfaceStyle": "light",
+    "description": "The fastest way to know what's happening in Richmond. Personalized local event discovery with maps, curated lists, and hidden gems.",
+    "ios": {
+      "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:rva-now.app"
+      ],
+      "bundleIdentifier": "com.rvanow.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RVA Now uses your location to show nearby events on the map.",
+        "NSCalendarsUsageDescription": "RVA Now adds events to your calendar when you tap Add to calendar.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.rvanow.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F3F0EB",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#C45D3E"
+        }
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#05040A"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RVA Now uses your location to show nearby events on the map."
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
