@@ -2,39 +2,112 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
-const tabs = [
-  { href: '/', label: 'Discover', icon: '✦' },
-  { href: '/map', label: 'Map', icon: '◎' },
-  { href: '/feed', label: 'Feed', icon: '◉' },
-  { href: '/you', label: 'You', icon: '○' },
+const navLinks = [
+  { href: '/', label: 'Discover' },
+  { href: '/map', label: 'Map' },
+  { href: '/feed', label: 'Feed' },
+  { href: '/you', label: 'You' },
 ];
 
 export function SiteNav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   const hideNav = pathname.startsWith('/privacy') || pathname.startsWith('/terms');
 
   if (hideNav) return null;
 
+  function isActive(href: string) {
+    return href === '/' ? pathname === '/' : pathname.startsWith(href);
+  }
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E6E0D8] bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-3xl items-center justify-around px-2 py-2">
-        {tabs.map((tab) => {
-          const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex min-w-[72px] flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                active ? 'text-[#C44B2F]' : 'text-[#8A8490]'
-              }`}
-            >
-              <span className="text-base">{tab.icon}</span>
-              {tab.label}
-            </Link>
-          );
-        })}
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0B0A10]/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="font-[family-name:var(--font-display)] text-lg font-extrabold tracking-[0.18em] text-white">
+            CITIPILOT
+          </Link>
+          <nav className="hidden items-center gap-1 md:flex">
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                    active ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <Link
+            href="/submit"
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/10"
+          >
+            List an Event
+          </Link>
+          <Link
+            href="/you"
+            className="rounded-full bg-[#C44B2F] px-4 py-2 text-sm font-extrabold text-white transition hover:bg-[#9E3A24]"
+          >
+            Account
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-full border border-white/15 px-3 py-2 text-sm font-bold text-white md:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label="Toggle navigation"
+        >
+          {open ? 'Close' : 'Menu'}
+        </button>
       </div>
-    </nav>
+
+      {open ? (
+        <div className="border-t border-white/10 px-4 py-4 md:hidden">
+          <nav className="flex flex-col gap-1">
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className={`rounded-xl px-3 py-3 text-sm font-bold ${
+                    active ? 'bg-white/10 text-white' : 'text-white/70'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/submit"
+              onClick={() => setOpen(false)}
+              className="rounded-xl px-3 py-3 text-sm font-bold text-white/70"
+            >
+              List an Event
+            </Link>
+            <Link
+              href="/you"
+              onClick={() => setOpen(false)}
+              className="mt-2 rounded-full bg-[#C44B2F] px-4 py-3 text-center text-sm font-extrabold text-white"
+            >
+              Account
+            </Link>
+          </nav>
+        </div>
+      ) : null}
+    </header>
   );
 }

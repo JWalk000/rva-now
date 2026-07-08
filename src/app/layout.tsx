@@ -1,9 +1,22 @@
 import type { Metadata } from 'next';
+import { Outfit, Syne } from 'next/font/google';
 
 import { SiteNav } from '@/components/SiteNav';
 import { AppProvider } from '@/context/AppProvider';
 
 import './globals.css';
+
+const display = Syne({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['600', '700', '800'],
+});
+
+const body = Outfit({
+  subsets: ['latin'],
+  variable: '--font-body',
+  weight: ['400', '500', '600', '700', '800'],
+});
 
 export const metadata: Metadata = {
   title: 'Citipilot — Discover Richmond Events & Places',
@@ -21,11 +34,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-[#F3F0EB] text-[#14121A] antialiased">
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body className="min-h-screen text-[#14121A] antialiased">
         <AppProvider>
-          <main className="mx-auto min-h-screen max-w-3xl">{children}</main>
           <SiteNav />
+          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
         </AppProvider>
       </body>
     </html>

@@ -15,8 +15,8 @@ export function EventPosterCard({ event, large }: Props) {
   return (
     <Link
       href={`/event/${event.id}`}
-      className={`group relative block overflow-hidden rounded-2xl bg-[#1B1724] shadow-lg ${
-        large ? 'min-w-[280px] max-w-[320px]' : 'min-w-[220px] max-w-[260px]'
+      className={`group relative block w-full overflow-hidden rounded-2xl bg-[#1B1724] shadow-lg ${
+        large ? '' : 'max-w-[260px]'
       }`}
     >
       <div className={`relative ${large ? 'h-56' : 'h-44'} w-full`}>

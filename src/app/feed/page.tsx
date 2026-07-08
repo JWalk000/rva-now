@@ -24,41 +24,43 @@ export default function FeedPage() {
   const placePosts = socialPosts.filter((post) => post.placeName).length;
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] pb-24 text-white">
-      <div className="border-b border-white/10 px-5 pb-4 pt-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#C44B2F]">Richmond</p>
-        <h1 className="mt-1 text-3xl font-extrabold">Feed</h1>
-        <p className="mt-2 text-sm text-white/65">
-          What people are doing around RVA — posts pin places onto the map.
-        </p>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {[
-            { label: 'Posts', value: socialPosts.length },
-            { label: 'Places', value: placePosts },
-            { label: 'Likes', value: totalLikes },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-2xl font-extrabold">{stat.value}</p>
-              <p className="text-xs text-white/55">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {FILTERS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setFilter(item)}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                filter === item ? 'bg-white text-[#14121A]' : 'bg-white/10 text-white/75'
-              }`}
-            >
-              {item}
-            </button>
-          ))}
+    <div className="min-h-screen bg-[#0B0A10] text-white">
+      <div className="border-b border-white/10">
+        <div className="mx-auto max-w-7xl px-4 pb-6 pt-8 sm:px-6 lg:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#C44B2F]">Richmond</p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-extrabold sm:text-4xl">Feed</h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/65">
+            What people are doing around RVA — posts pin places onto the map.
+          </p>
+          <div className="mt-6 grid max-w-xl grid-cols-3 gap-3">
+            {[
+              { label: 'Posts', value: socialPosts.length },
+              { label: 'Places', value: placePosts },
+              { label: 'Likes', value: totalLikes },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                <p className="text-2xl font-extrabold">{stat.value}</p>
+                <p className="text-xs text-white/55">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {FILTERS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                  filter === item ? 'bg-white text-[#14121A]' : 'bg-white/10 text-white/75'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="space-y-4 px-4 py-5">
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:px-8 xl:grid-cols-3">
         {posts.map((post) => (
           <FeedPostCard key={post.id} post={post} />
         ))}

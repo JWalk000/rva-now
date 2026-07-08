@@ -1,21 +1,32 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
+import type { MapMarker } from '@/components/MapView';
 import { useApp } from '@/context/AppProvider';
 import { placeCategoryLabels, type PlaceCategory } from '@/types/place';
 
 const FILTERS: Array<'events' | PlaceCategory | 'all'> = ['all', 'events', 'eat', 'cafes', 'bars', 'nightlife'];
+
+const MapView = dynamic(() => import('@/components/MapView'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-[#0B0A10] text-sm text-white/60">
+      Loading map…
+    </div>
+  ),
+});
 
 export default function MapPage() {
   const { events, places } = useApp();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all');
   const [selected, setSelected] = useState<{ type: 'event' | 'place'; id: string } | null>(null);
 
-  const markers = useMemo(() => {
-    const eventMarkers = events.map((e) => ({
-      type: 'event' as const,
+  const markers = useMemo<MapMarker[]>(() => {
+    const eventMarkers: MapMarker[] = events.map((e) => ({
+      type: 'event',
       id: e.id,
       title: e.title,
       subtitle: `${e.venue} · ${e.neighborhood}`,
@@ -23,8 +34,8 @@ export default function MapPage() {
       lng: e.lng,
       href: `/event/${e.id}`,
     }));
-    const placeMarkers = places.map((p) => ({
-      type: 'place' as const,
+    const placeMarkers: MapMarker[] = places.map((p) => ({
+      type: 'place',
       id: p.id,
       title: p.name,
       subtitle: `${p.subcategory} · ${p.neighborhood}`,
@@ -44,91 +55,87 @@ export default function MapPage() {
 
   const active = selected
     ? visible.find((m) => m.id === selected.id && m.type === selected.type)
-    : visible[0];
+    : null;
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] pb-24 text-white">
-      <div className="border-b border-white/10 px-5 pb-4 pt-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#C44B2F]">Richmond</p>
-        <h1 className="mt-1 text-3xl font-extrabold">Map</h1>
-        <p className="mt-2 text-sm text-white/65">Tap a pin to see what&apos;s happening around RVA.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {FILTERS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setFilter(item)}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                filter === item ? 'bg-[#C44B2F] text-white' : 'bg-white/10 text-white/75'
-              }`}
-            >
-              {item === 'all' ? 'All' : item === 'events' ? 'Events' : placeCategoryLabels[item]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative mx-4 mt-4 overflow-hidden rounded-3xl border border-white/10 bg-[#14121A]">
-        <iframe
-          title="RVA map"
-          className="h-[52vh] w-full border-0 grayscale-[20%] invert-[92%] hue-rotate-180"
-          loading="lazy"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-77.50%2C37.50%2C-77.40%2C37.57&layer=mapnik"
-        />
-        <div className="absolute inset-0 pointer-events-none">
-          {visible.slice(0, 24).map((marker, index) => (
-            <button
-              key={`${marker.type}-${marker.id}`}
-              type="button"
-              style={{
-                left: `${12 + (index % 6) * 14}%`,
-                top: `${18 + Math.floor(index / 6) * 16}%`,
-              }}
-              onClick={() => setSelected({ type: marker.type, id: marker.id })}
-              className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-full rounded-full px-2 py-1 text-[10px] font-bold shadow-lg ${
-                active?.id === marker.id && active?.type === marker.type
-                  ? 'bg-[#C44B2F] text-white'
-                  : marker.type === 'event'
-                    ? 'bg-[#D4922A] text-white'
-                    : 'bg-[#2F6B52] text-white'
-              }`}
-            >
-              {marker.type === 'event' ? '★' : '●'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {active ? (
-        <div className="mx-4 mt-4 rounded-2xl border border-white/10 bg-[#14121A] p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#C44B2F]">
-            {active.type === 'event' ? 'Event' : 'Place'}
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-[#0B0A10] text-white lg:flex-row">
+      <aside className="z-10 flex w-full shrink-0 flex-col border-b border-white/10 bg-[#0B0A10] lg:w-[360px] lg:border-b-0 lg:border-r">
+        <div className="px-5 pb-4 pt-6 sm:px-6">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#C44B2F]">Richmond</p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-extrabold">Map</h1>
+          <p className="mt-2 text-sm text-white/65">
+            Real locations across RVA — filter pins and open what&apos;s nearby.
           </p>
-          <h2 className="mt-1 text-xl font-extrabold">{active.title}</h2>
-          <p className="mt-1 text-sm text-white/65">{active.subtitle}</p>
-          {active.href ? (
-            <Link href={active.href} className="mt-4 inline-flex rounded-full bg-[#C44B2F] px-4 py-2 text-sm font-bold">
-              View details →
-            </Link>
-          ) : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {FILTERS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                  filter === item ? 'bg-[#C44B2F] text-white' : 'bg-white/10 text-white/75 hover:bg-white/15'
+                }`}
+              >
+                {item === 'all' ? 'All' : item === 'events' ? 'Events' : placeCategoryLabels[item]}
+              </button>
+            ))}
+          </div>
         </div>
-      ) : null}
 
-      <div className="mx-4 mt-4 space-y-2">
-        {visible.slice(0, 8).map((marker) => (
-          <button
-            key={`${marker.type}-${marker.id}-row`}
-            type="button"
-            onClick={() => setSelected({ type: marker.type, id: marker.id })}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left"
-          >
-            <div>
-              <p className="font-bold">{marker.title}</p>
-              <p className="text-sm text-white/60">{marker.subtitle}</p>
-            </div>
-            <span>{marker.type === 'event' ? '★' : '●'}</span>
-          </button>
-        ))}
+        {active ? (
+          <div className="mx-5 mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:mx-6">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#C44B2F]">
+              {active.type === 'event' ? 'Event' : 'Place'}
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold">{active.title}</h2>
+            <p className="mt-1 text-sm text-white/65">{active.subtitle}</p>
+            {active.href ? (
+              <Link
+                href={active.href}
+                className="mt-4 inline-flex rounded-full bg-[#C44B2F] px-4 py-2 text-sm font-bold hover:bg-[#9E3A24]"
+              >
+                View details →
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="hidden max-h-[40vh] flex-1 overflow-y-auto px-5 pb-6 sm:px-6 lg:block lg:max-h-none">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/40">
+            {visible.length} locations
+          </p>
+          <div className="space-y-2">
+            {visible.slice(0, 40).map((marker) => {
+              const isActive = active?.id === marker.id && active?.type === marker.type;
+              return (
+                <button
+                  key={`${marker.type}-${marker.id}-row`}
+                  type="button"
+                  onClick={() => setSelected({ type: marker.type, id: marker.id })}
+                  className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                    isActive
+                      ? 'border-[#C44B2F]/50 bg-[#C44B2F]/15'
+                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-bold">{marker.title}</p>
+                    <p className="truncate text-sm text-white/60">{marker.subtitle}</p>
+                  </div>
+                  <span className="ml-3 shrink-0">{marker.type === 'event' ? '★' : '●'}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </aside>
+
+      <div className="relative min-h-[62vh] flex-1 lg:min-h-0">
+        <MapView
+          markers={visible}
+          selected={selected}
+          onSelect={(marker) => setSelected({ type: marker.type, id: marker.id })}
+        />
       </div>
     </div>
   );
