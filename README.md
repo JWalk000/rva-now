@@ -21,28 +21,22 @@ RVA Now is designed to become the fastest way to discover what is happening in R
 4. **Local flavor** — highlighting hidden gems, recurring community activity, and curated lists
 5. **Monetization from day one** — featured listings, organizer subscriptions, and sponsorship-ready placements
 
-## Included in this starter
+## Repositories
 
-This starter includes a monorepo with:
+This repo contains the **mobile app** and **backend** only.
 
-### `apps/web`
-A mobile-friendly website prototype that includes:
-- hero section and product positioning
-- personalized feed concept
-- neighborhood and vibe filters
-- list / map-style toggle
-- saved events
-- curated lists
-- featured events
-- hidden gems
-- weekly digest signup capture
-- organizer/business event submission form
-- organizer dashboard foundation
+| Project | Location | Repo |
+|---------|----------|------|
+| Mobile app (Expo) | `apps/mobile/` | this repo |
+| Website (Next.js) | `../rva-now-web/` | separate repo |
+| Backend (Supabase) | `supabase/` | this repo |
+
+The website is a **standalone project** built using the mobile app as a design reference. It does not share code with this repo.
+
+## Included in this repo
 
 ### `apps/mobile`
-A mobile app starter that includes:
-- shared event data
-- shared personalization logic
+A mobile app that includes:
 - neighborhood and vibe preferences
 - a simple personalized mobile feed
 - monetization lane placeholders
