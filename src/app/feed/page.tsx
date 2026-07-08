@@ -2,14 +2,16 @@
 
 import { useMemo, useState } from 'react';
 
+import { CreatePostModal } from '@/components/CreatePostModal';
 import { FeedPostCard } from '@/components/FeedPostCard';
 import { useApp } from '@/context/AppProvider';
 
 const FILTERS = ['For You', 'Nearby', 'Events', 'Places'] as const;
 
 export default function FeedPage() {
-  const { socialPosts } = useApp();
+  const { socialPosts, places, createSocialPost } = useApp();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('For You');
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const posts = useMemo(() => {
     if (filter === 'Events') return socialPosts.filter((post) => post.eventTitle);
@@ -32,6 +34,28 @@ export default function FeedPage() {
           <p className="mt-2 max-w-2xl text-sm text-white/65">
             What people are doing around RVA — posts pin places onto the map.
           </p>
+
+          <button
+            type="button"
+            onClick={() => setComposeOpen(true)}
+            className="mt-6 flex w-full max-w-xl items-center gap-4 rounded-2xl border border-white/15 bg-gradient-to-r from-[#C44B2F]/25 via-white/5 to-transparent px-4 py-4 text-left transition hover:border-[#C44B2F]/50 hover:from-[#C44B2F]/35 sm:px-5"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#C44B2F] text-sm font-extrabold text-white">
+              +
+            </span>
+            <span className="min-w-0">
+              <span className="block font-[family-name:var(--font-display)] text-lg font-extrabold">
+                Create a post
+              </span>
+              <span className="mt-0.5 block text-sm text-white/60">
+                Share what&apos;s happening around Richmond
+              </span>
+            </span>
+            <span className="ml-auto hidden rounded-full bg-[#C44B2F] px-4 py-2 text-sm font-bold text-white sm:inline">
+              Compose
+            </span>
+          </button>
+
           <div className="mt-6 grid max-w-xl grid-cols-3 gap-3">
             {[
               { label: 'Posts', value: socialPosts.length },
@@ -65,6 +89,15 @@ export default function FeedPage() {
           <FeedPostCard key={post.id} post={post} />
         ))}
       </div>
+
+      <CreatePostModal
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        places={places}
+        onSubmit={(input) => {
+          createSocialPost(input);
+        }}
+      />
     </div>
   );
 }

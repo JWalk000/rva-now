@@ -28,6 +28,16 @@ import type { TicketTypeInput } from '@/types/ticket';
 const PREFS_KEY = 'citipilot-prefs';
 const SAVED_KEY = 'citipilot-saved';
 const SAVED_PLACES_KEY = 'citipilot-saved-places';
+const USER_POSTS_KEY = 'citipilot-user-posts';
+
+export type CreateSocialPostInput = Omit<
+  FeedPost,
+  'id' | 'createdAt' | 'likes' | 'comments' | 'shares' | 'userName' | 'userHandle' | 'avatarColor'
+> & {
+  userName?: string;
+  userHandle?: string;
+  avatarColor?: string;
+};
 
 const defaultPrefs: UserPrefs = {
   neighborhoods: ["The Fan", "Scott's Addition", 'Carytown'],
@@ -64,6 +74,7 @@ type AppContextValue = {
   getPlacesByCategory: (category?: PlaceCategory | 'all') => Place[];
   toggleSavedPlace: (id: string) => void;
   isPlaceSaved: (id: string) => boolean;
+  createSocialPost: (input: CreateSocialPostInput) => FeedPost;
   refreshData: () => Promise<void>;
   toggleNeighborhood: (value: string) => void;
   toggleVibe: (value: string) => void;
@@ -98,9 +109,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [digest, setDigest] = useState<DigestSignup | null>(null);
   const [events, setEvents] = useState<RvaEvent[]>(localEvents);
   const [lists, setLists] = useState<CuratedList[]>(localLists);
+  const [userPosts, setUserPosts] = useState<FeedPost[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
-  const socialPosts = localFeedPosts;
+
+  const socialPosts = useMemo(
+    () =>
+      [...userPosts, ...localFeedPosts].sort(
+        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+      ),
+    [userPosts],
+  );
 
   const places = useMemo(
     () => pullPlacesFromCommunity({ posts: socialPosts, savedPlaceIds }),
@@ -122,6 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPrefs(readJson(PREFS_KEY, defaultPrefs));
     setSavedIds(readJson(SAVED_KEY, []));
     setSavedPlaceIds(readJson(SAVED_PLACES_KEY, []));
+    setUserPosts(readJson(USER_POSTS_KEY, []));
     void refreshData().finally(() => setReady(true));
   }, [refreshData]);
 
@@ -188,6 +208,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [places],
   );
 
+  const createSocialPost = useCallback((input: CreateSocialPostInput) => {
+    const post: FeedPost = {
+      ...input,
+      id: `user-post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      userName: input.userName?.trim() || 'You',
+      userHandle: input.userHandle?.trim() || 'you',
+      avatarColor: input.avatarColor || '#C44B2F',
+      createdAt: new Date().toISOString(),
+      likes: 0,
+      comments: 0,
+      shares: 0,
+    };
+    setUserPosts((current) => {
+      const next = [post, ...current];
+      localStorage.setItem(USER_POSTS_KEY, JSON.stringify(next));
+      return next;
+    });
+    return post;
+  }, []);
+
   const signUpDigest = useCallback(async (contact: string, channel: 'email' | 'sms') => {
     const signup = await createDigestSignup(contact, channel);
     setDigest(signup);
@@ -222,6 +262,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     getPlacesByCategory,
     toggleSavedPlace,
     isPlaceSaved,
+    createSocialPost,
     refreshData,
     toggleNeighborhood,
     toggleVibe,

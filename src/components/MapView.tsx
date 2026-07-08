@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+import type { UserLocation } from '@/lib/location';
 
 export type MapMarker = {
   type: 'event' | 'place';
@@ -15,15 +17,21 @@ export type MapMarker = {
   lng: number;
   href: string | null;
   category?: string;
+  distanceMiles?: number;
 };
 
 type Props = {
   markers: MapMarker[];
   selected: { type: 'event' | 'place'; id: string } | null;
   onSelect: (marker: MapMarker) => void;
+  userLocation?: UserLocation | null;
+  /** When true, center on user and zoom nearby instead of fitting all markers. */
+  focusNearby?: boolean;
+  recenterToken?: number;
 };
 
 const RVA_CENTER: [number, number] = [37.5407, -77.436];
+const NEARBY_ZOOM = 13;
 
 function makeIcon(type: 'event' | 'place', active: boolean) {
   const color = active ? '#C44B2F' : type === 'event' ? '#D4922A' : '#2F6B52';
@@ -44,10 +52,25 @@ function makeIcon(type: 'event' | 'place', active: boolean) {
   });
 }
 
-function FitBounds({ markers }: { markers: MapMarker[] }) {
+function MapCamera({
+  markers,
+  userLocation,
+  focusNearby,
+  recenterToken,
+}: {
+  markers: MapMarker[];
+  userLocation?: UserLocation | null;
+  focusNearby?: boolean;
+  recenterToken?: number;
+}) {
   const map = useMap();
 
   useEffect(() => {
+    if (focusNearby && userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
+      return;
+    }
+
     const valid = markers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
     if (!valid.length) {
       map.setView(RVA_CENTER, 12);
@@ -59,12 +82,19 @@ function FitBounds({ markers }: { markers: MapMarker[] }) {
     }
     const bounds = L.latLngBounds(valid.map((m) => [m.lat, m.lng] as [number, number]));
     map.fitBounds(bounds.pad(0.18), { animate: false });
-  }, [map, markers]);
+  }, [map, markers, userLocation, focusNearby, recenterToken]);
 
   return null;
 }
 
-export default function MapView({ markers, selected, onSelect }: Props) {
+export default function MapView({
+  markers,
+  selected,
+  onSelect,
+  userLocation,
+  focusNearby,
+  recenterToken = 0,
+}: Props) {
   const icons = useMemo(() => {
     return {
       event: makeIcon('event', false),
@@ -86,7 +116,31 @@ export default function MapView({ markers, selected, onSelect }: Props) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
-      <FitBounds markers={markers} />
+      <MapCamera
+        markers={markers}
+        userLocation={userLocation}
+        focusNearby={focusNearby}
+        recenterToken={recenterToken}
+      />
+      {userLocation ? (
+        <CircleMarker
+          center={[userLocation.lat, userLocation.lng]}
+          radius={10}
+          pathOptions={{
+            color: '#fff',
+            weight: 3,
+            fillColor: '#3B82F6',
+            fillOpacity: 1,
+          }}
+        >
+          <Popup>
+            <div className="min-w-[120px] text-[#14121A]">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#3B82F6]">You</p>
+              <p className="mt-0.5 text-sm font-extrabold">Your location</p>
+            </div>
+          </Popup>
+        </CircleMarker>
+      ) : null}
       {markers.map((marker) => {
         if (!Number.isFinite(marker.lat) || !Number.isFinite(marker.lng)) return null;
         const active = selected?.id === marker.id && selected?.type === marker.type;
@@ -115,6 +169,15 @@ export default function MapView({ markers, selected, onSelect }: Props) {
                 </p>
                 <p className="mt-0.5 text-sm font-extrabold leading-snug">{marker.title}</p>
                 <p className="mt-0.5 text-xs text-[#5A5560]">{marker.subtitle}</p>
+                {typeof marker.distanceMiles === 'number' ? (
+                  <p className="mt-1 text-xs font-bold text-[#C44B2F]">
+                    {marker.distanceMiles < 0.1
+                      ? '<0.1 mi away'
+                      : marker.distanceMiles < 10
+                        ? `${marker.distanceMiles.toFixed(1)} mi away`
+                        : `${Math.round(marker.distanceMiles)} mi away`}
+                  </p>
+                ) : null}
                 {marker.href ? (
                   <Link href={marker.href} className="mt-2 inline-block text-xs font-bold text-[#C44B2F]">
                     View details →
