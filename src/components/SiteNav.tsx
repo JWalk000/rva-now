@@ -23,10 +23,10 @@ export function SiteNav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0B0A10]/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[#DED8D0] bg-[#F3F0EB]">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-[family-name:var(--font-display)] text-lg font-extrabold tracking-[0.18em] text-white">
+          <Link href="/" className="font-[family-name:var(--font-display)] text-lg font-extrabold tracking-[0.18em] text-[#14121A]">
             CITIPILOT
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
@@ -37,7 +37,7 @@ export function SiteNav() {
                   key={link.href}
                   href={link.href}
                   className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
-                    active ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white'
+                    active ? 'bg-[#C44B2F] text-white' : 'text-[#14121A]/70 hover:text-[#14121A]'
                   }`}
                 >
                   {link.label}
@@ -50,7 +50,7 @@ export function SiteNav() {
         <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/submit"
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/10"
+            className="rounded-full border border-[#14121A]/20 bg-white px-4 py-2 text-sm font-bold text-[#14121A] transition hover:border-[#14121A]/35 hover:bg-[#EBE6DF]"
           >
             List an Event
           </Link>
@@ -64,7 +64,7 @@ export function SiteNav() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-full border border-white/15 px-3 py-2 text-sm font-bold text-white md:hidden"
+          className="inline-flex items-center justify-center rounded-full border border-[#14121A]/20 bg-white px-3 py-2 text-sm font-bold text-[#14121A] md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label="Toggle navigation"
@@ -74,7 +74,7 @@ export function SiteNav() {
       </div>
 
       {open ? (
-        <div className="border-t border-white/10 px-4 py-4 md:hidden">
+        <div className="border-t border-[#DED8D0] bg-[#F3F0EB] px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-1">
             {navLinks.map((link) => {
               const active = isActive(link.href);
@@ -84,7 +84,7 @@ export function SiteNav() {
                   href={link.href}
                   onClick={() => setOpen(false)}
                   className={`rounded-xl px-3 py-3 text-sm font-bold ${
-                    active ? 'bg-white/10 text-white' : 'text-white/70'
+                    active ? 'bg-[#C44B2F] text-white' : 'text-[#14121A]/75'
                   }`}
                 >
                   {link.label}
@@ -94,7 +94,7 @@ export function SiteNav() {
             <Link
               href="/submit"
               onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-3 text-sm font-bold text-white/70"
+              className="rounded-xl px-3 py-3 text-sm font-bold text-[#14121A]/75"
             >
               List an Event
             </Link>
