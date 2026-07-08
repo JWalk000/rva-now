@@ -18,7 +18,6 @@ const PRICES: Record<string, { amount: number; name: string; mode: 'payment' | '
     mode: 'subscription',
     checkoutType: 'listing',
   },
-  // Business place listing on the map / Around Town — $5/mo
   place_monthly: {
     amount: 500,
     name: 'Citipilot Place Listing (monthly)',
@@ -33,12 +32,50 @@ const PRICES: Record<string, { amount: number; name: string; mode: 'payment' | '
   },
 };
 
+type PlaceMeta = {
+  name?: string;
+  category?: string;
+  subcategory?: string;
+  neighborhood?: string;
+  description?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  emoji?: string;
+  lat?: number;
+  lng?: number;
+};
+
+function appendPlaceMetadata(params: URLSearchParams, placeId: string, place?: PlaceMeta) {
+  params.set('metadata[place_id]', placeId);
+  if (!place) return;
+  const fields: Array<[string, string | undefined]> = [
+    ['place_name', place.name],
+    ['place_category', place.category],
+    ['place_subcategory', place.subcategory],
+    ['place_neighborhood', place.neighborhood],
+    ['place_description', place.description],
+    ['place_email', place.email],
+    ['place_website', place.website],
+    ['place_address', place.address],
+    ['place_emoji', place.emoji],
+    ['place_lat', place.lat != null ? String(place.lat) : undefined],
+    ['place_lng', place.lng != null ? String(place.lng) : undefined],
+  ];
+  for (const [key, value] of fields) {
+    if (value != null && value !== '') {
+      params.set(`metadata[${key}]`, value.slice(0, 500));
+    }
+  }
+}
+
 function buildCheckoutParams(
   tier: string,
   price: { amount: number; name: string; mode: 'payment' | 'subscription'; checkoutType: string },
   submission_id: string,
   success_url?: string,
   cancel_url?: string,
+  place?: PlaceMeta,
 ) {
   const params = new URLSearchParams({
     mode: price.mode,
@@ -55,6 +92,9 @@ function buildCheckoutParams(
   if (price.mode === 'subscription') {
     params.set('line_items[0][price_data][recurring][interval]', 'month');
   }
+  if (price.checkoutType === 'place') {
+    appendPlaceMetadata(params, submission_id, place);
+  }
   return params;
 }
 
@@ -70,7 +110,7 @@ Deno.serve(async (request) => {
       });
     }
 
-    const { submission_id, tier, success_url, cancel_url } = await request.json();
+    const { submission_id, tier, success_url, cancel_url, place } = await request.json();
     const price = PRICES[tier as string];
     if (!submission_id || !price) {
       return new Response(JSON.stringify({ error: 'submission_id and valid tier required' }), {
@@ -79,8 +119,14 @@ Deno.serve(async (request) => {
       });
     }
 
-    // Dynamic price_data works with both sk_test_ and sk_live_ (no pre-made Price IDs needed)
-    const params = buildCheckoutParams(tier, price, submission_id, success_url, cancel_url);
+    if (price.checkoutType === 'place' && (!place?.name || !place?.email)) {
+      return new Response(JSON.stringify({ error: 'place name and email required for place checkout' }), {
+        status: 400,
+        headers: corsHeaders,
+      });
+    }
+
+    const params = buildCheckoutParams(tier, price, submission_id, success_url, cancel_url, place);
 
     const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -94,7 +140,6 @@ Deno.serve(async (request) => {
     const session = await stripeRes.json();
     if (!stripeRes.ok) throw new Error(session.error?.message ?? 'Stripe error');
 
-    // Event listing tiers mark submissions pending; place subscriptions are client-tracked.
     if (price.checkoutType === 'listing') {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
@@ -104,6 +149,32 @@ Deno.serve(async (request) => {
         .from('event_submissions')
         .update({ payment_status: 'pending', stripe_session_id: session.id })
         .eq('id', submission_id);
+    }
+
+    if (price.checkoutType === 'place' && place) {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+      const now = new Date().toISOString();
+      await supabase.from('business_places').upsert({
+        id: submission_id,
+        name: place.name,
+        category: place.category ?? 'eat',
+        subcategory: place.subcategory ?? '',
+        neighborhood: place.neighborhood ?? 'Downtown',
+        description: place.description ?? '',
+        email: place.email,
+        website: place.website ?? null,
+        address: place.address ?? null,
+        emoji: place.emoji ?? '📍',
+        lat: place.lat ?? 37.5407,
+        lng: place.lng ?? -77.436,
+        stripe_session_id: session.id,
+        status: 'pending',
+        approved: false,
+        updated_at: now,
+      });
     }
 
     return new Response(JSON.stringify({ url: session.url, session_id: session.id }), {

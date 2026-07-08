@@ -26,6 +26,60 @@ async function verifyStripeSignature(body: string, signature: string | null, sec
   return expected === sig;
 }
 
+function meta(session: { metadata?: Record<string, string> }, key: string) {
+  return session.metadata?.[key] ?? '';
+}
+
+async function upsertBusinessPlaceFromSession(
+  supabase: ReturnType<typeof createClient>,
+  session: {
+    id: string;
+    customer?: string;
+    subscription?: string;
+    metadata?: Record<string, string>;
+  },
+) {
+  const placeId = meta(session, 'place_id') || meta(session, 'submission_id');
+  if (!placeId) return null;
+
+  const now = new Date().toISOString();
+  const row = {
+    id: placeId,
+    name: meta(session, 'place_name'),
+    category: meta(session, 'place_category') || 'eat',
+    subcategory: meta(session, 'place_subcategory') || '',
+    neighborhood: meta(session, 'place_neighborhood') || 'Downtown',
+    description: meta(session, 'place_description') || '',
+    email: meta(session, 'place_email'),
+    website: meta(session, 'place_website') || null,
+    address: meta(session, 'place_address') || null,
+    emoji: meta(session, 'place_emoji') || '📍',
+    lat: Number(meta(session, 'place_lat')) || 37.5407,
+    lng: Number(meta(session, 'place_lng')) || -77.436,
+    stripe_subscription_id: session.subscription ?? null,
+    stripe_customer_id: session.customer ?? null,
+    stripe_session_id: session.id,
+    status: 'active',
+    approved: true,
+    updated_at: now,
+  };
+
+  const { error } = await supabase.from('business_places').upsert(row);
+  if (error) throw error;
+  return placeId;
+}
+
+async function cancelBusinessPlaceBySubscription(
+  supabase: ReturnType<typeof createClient>,
+  subscriptionId: string,
+) {
+  const now = new Date().toISOString();
+  await supabase
+    .from('business_places')
+    .update({ status: 'canceled', approved: false, updated_at: now })
+    .eq('stripe_subscription_id', subscriptionId);
+}
+
 Deno.serve(async (request) => {
   try {
     const body = await request.text();
@@ -58,6 +112,27 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object;
+      await cancelBusinessPlaceBySubscription(supabase, subscription.id);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object;
+      const active = ['active', 'trialing'].includes(subscription.status);
+      if (!active) {
+        await cancelBusinessPlaceBySubscription(supabase, subscription.id);
+      } else {
+        const now = new Date().toISOString();
+        await supabase
+          .from('business_places')
+          .update({ status: 'active', approved: true, updated_at: now })
+          .eq('stripe_subscription_id', subscription.id);
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const checkoutType = session.metadata?.checkout_type;
@@ -70,6 +145,11 @@ Deno.serve(async (request) => {
 
         const result = await fulfillTicketOrder(orderId);
         return new Response(JSON.stringify({ ok: true, ...result }), { status: 200 });
+      }
+
+      if (checkoutType === 'place' || checkoutType === 'place_monthly') {
+        const placeId = await upsertBusinessPlaceFromSession(supabase, session);
+        return new Response(JSON.stringify({ ok: true, place_id: placeId }), { status: 200 });
       }
 
       const submissionId = session.metadata?.submission_id;
