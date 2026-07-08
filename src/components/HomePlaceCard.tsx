@@ -8,6 +8,7 @@ type Props = {
 };
 
 function sourceLabel(place: Place) {
+  if (place.source === 'business') return 'Business listing';
   if (place.source === 'reviews') return `★ ${place.rating?.toFixed(1)} · ${place.reviewCount} reviews`;
   if (place.source === 'community') return `${place.postCount} community posts`;
   return placeCategoryLabels[place.category];

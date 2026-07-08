@@ -9,7 +9,17 @@ import { useApp } from '@/context/AppProvider';
 import { distanceMiles, formatDistanceMiles, type UserLocation } from '@/lib/location';
 import { placeCategoryLabels, type PlaceCategory } from '@/types/place';
 
-const FILTERS: Array<'events' | PlaceCategory | 'all'> = ['all', 'events', 'eat', 'cafes', 'bars', 'nightlife'];
+const FILTERS: Array<'events' | PlaceCategory | 'all'> = [
+  'all',
+  'events',
+  'eat',
+  'cafes',
+  'bars',
+  'nightlife',
+  'shops',
+  'fitness',
+  'entertainment',
+];
 
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,

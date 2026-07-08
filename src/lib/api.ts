@@ -220,13 +220,18 @@ export async function createEventSubmission(
   };
 }
 
+export type CheckoutTier = 'featured' | 'subscription' | 'place_monthly' | 'business_place';
+
 export async function createCheckoutSession(
   submissionId: string,
-  tier: 'featured' | 'subscription',
+  tier: CheckoutTier,
   origin: string,
+  options?: { successPath?: string; cancelPath?: string },
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!url) throw new Error('Supabase URL not configured');
+  const successPath = options?.successPath ?? '/submit?paid=1';
+  const cancelPath = options?.cancelPath ?? '/submit?paid=0';
   const res = await fetch(`${url}/functions/v1/create-checkout`, {
     method: 'POST',
     headers: {
@@ -236,8 +241,8 @@ export async function createCheckoutSession(
     body: JSON.stringify({
       submission_id: submissionId,
       tier,
-      success_url: `${origin}/submit?paid=1`,
-      cancel_url: `${origin}/submit?paid=0`,
+      success_url: `${origin}${successPath}`,
+      cancel_url: `${origin}${cancelPath}`,
     }),
   });
   const json = await res.json();

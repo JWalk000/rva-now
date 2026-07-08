@@ -1,6 +1,6 @@
 import { pullWellReviewedPlaces } from '@/lib/reviewedPlaces';
 import type { FeedPost } from '@/types/feed';
-import type { Place, PlaceCategory, PlaceSource } from '@/types/place';
+import type { Place, PlaceCategory } from '@/types/place';
 
 function slugify(value: string) {
   return value
@@ -14,9 +14,35 @@ function categoryFromSubcategory(subcategory?: string): PlaceCategory {
   if (text.includes('coffee') || text.includes('bakery') || text.includes('cafe') || text.includes('donut')) {
     return 'cafes';
   }
-  if (text.includes('cocktail') || text.includes('brew') || text.includes('bar') || text.includes('pub')) return 'bars';
+  if (
+    text.includes('distillery') ||
+    text.includes('meadery') ||
+    text.includes('cocktail') ||
+    text.includes('brew') ||
+    text.includes('bar') ||
+    text.includes('pub') ||
+    text.includes('tasting')
+  ) {
+    return 'bars';
+  }
+  if (
+    text.includes('axe') ||
+    text.includes('bowling') ||
+    text.includes('arcade') ||
+    text.includes('escape') ||
+    text.includes('mini golf') ||
+    text.includes('golf') ||
+    text.includes('skate') ||
+    text.includes('trampoline') ||
+    text.includes('entertain') ||
+    text.includes('family fun')
+  ) {
+    return 'entertainment';
+  }
   if (
     text.includes('vintage') ||
+    text.includes('thrift') ||
+    text.includes('record') ||
     text.includes('book') ||
     text.includes('shop') ||
     text.includes('retail') ||
@@ -24,11 +50,23 @@ function categoryFromSubcategory(subcategory?: string): PlaceCategory {
   ) {
     return 'shops';
   }
-  if (text.includes('music') || text.includes('club') || text.includes('nightlife') || text.includes('venue')) {
+  if (
+    text.includes('music') ||
+    text.includes('club') ||
+    text.includes('nightlife') ||
+    text.includes('venue') ||
+    text.includes('theater') ||
+    text.includes('theatre') ||
+    text.includes('comedy') ||
+    text.includes('karaoke') ||
+    text.includes('dance')
+  ) {
     return 'nightlife';
   }
   if (text.includes('market')) return 'markets';
-  if (text.includes('fitness') || text.includes('gym') || text.includes('run')) return 'fitness';
+  if (text.includes('fitness') || text.includes('gym') || text.includes('run') || text.includes('climb')) {
+    return 'fitness';
+  }
   return 'eat';
 }
 
@@ -58,7 +96,8 @@ export function pullPlacesFromCommunity(input: {
   for (const place of userAddedPlaces) {
     byId.set(place.id, {
       ...place,
-      source: 'added',
+      source: place.source === 'business' ? 'business' : 'added',
+      featured: place.source === 'business' ? true : place.featured,
       postCount: place.postCount ?? 0,
       recentHandles: place.recentHandles ?? [],
     });
@@ -86,6 +125,8 @@ export function pullPlacesFromCommunity(input: {
         existing.featured = true;
       } else if (existing.source === 'added') {
         existing.source = 'community';
+      } else if (existing.source === 'business') {
+        existing.featured = true;
       }
       continue;
     }
@@ -124,6 +165,7 @@ export function filterPlacesByCategory(places: Place[], category?: PlaceCategory
 }
 
 export function sourceLabel(place: Place) {
+  if (place.source === 'business') return 'Business listing';
   if (place.source === 'added') return 'Added by you';
   if (place.source === 'saved') return 'Saved';
   if (place.source === 'reviews') {
@@ -131,4 +173,18 @@ export function sourceLabel(place: Place) {
   }
   if (place.rating) return `★ ${place.rating.toFixed(1)} · From the feed`;
   return 'From the feed';
+}
+
+/** Rough neighborhood centroids for map pins when lat/lng not provided */
+export const neighborhoodCoords: Record<string, { lat: number; lng: number }> = {
+  Downtown: { lat: 37.5407, lng: -77.436 },
+  'The Fan': { lat: 37.552, lng: -77.458 },
+  "Scott's Addition": { lat: 37.569, lng: -77.466 },
+  'Church Hill': { lat: 37.532, lng: -77.416 },
+  Manchester: { lat: 37.523, lng: -77.445 },
+  Carytown: { lat: 37.553, lng: -77.48 },
+};
+
+export function coordsForNeighborhood(neighborhood: string): { lat: number; lng: number } {
+  return neighborhoodCoords[neighborhood] ?? { lat: 37.5407, lng: -77.436 };
 }

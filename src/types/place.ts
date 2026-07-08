@@ -5,9 +5,10 @@ export type PlaceCategory =
   | 'shops'
   | 'nightlife'
   | 'markets'
-  | 'fitness';
+  | 'fitness'
+  | 'entertainment';
 
-export type PlaceSource = 'community' | 'reviews' | 'saved' | 'added';
+export type PlaceSource = 'community' | 'reviews' | 'saved' | 'added' | 'business';
 
 export type Place = {
   id: string;
@@ -21,13 +22,17 @@ export type Place = {
   lat: number;
   lng: number;
   featured?: boolean;
-  /** community = feed posts, reviews = well-reviewed pull */
+  /** community = feed posts, reviews = well-reviewed pull, business = paid listing */
   source: PlaceSource;
   postCount: number;
   lastActiveAt: string;
   recentHandles: string[];
   rating?: number;
   reviewCount?: number;
+  address?: string;
+  website?: string;
+  contactEmail?: string;
+  subscriptionActive?: boolean;
 };
 
 export const placeCategoryLabels: Record<PlaceCategory, string> = {
@@ -38,4 +43,24 @@ export const placeCategoryLabels: Record<PlaceCategory, string> = {
   nightlife: 'Go out',
   markets: 'Markets',
   fitness: 'Fitness',
+  entertainment: 'Fun',
 };
+
+/** Subcategories suggested for business place listings */
+export const businessPlaceSubcategories: Array<{ category: PlaceCategory; label: string; emoji: string }> = [
+  { category: 'entertainment', label: 'Axe throwing', emoji: '🪓' },
+  { category: 'entertainment', label: 'Bowling', emoji: '🎳' },
+  { category: 'entertainment', label: 'Arcade', emoji: '🕹️' },
+  { category: 'entertainment', label: 'Escape room', emoji: '🔐' },
+  { category: 'entertainment', label: 'Mini golf', emoji: '⛳' },
+  { category: 'shops', label: 'Thrift', emoji: '👗' },
+  { category: 'shops', label: 'Vintage', emoji: '🕶️' },
+  { category: 'shops', label: 'Retail', emoji: '🛍️' },
+  { category: 'eat', label: 'Restaurant', emoji: '🍽️' },
+  { category: 'cafes', label: 'Cafe', emoji: '☕' },
+  { category: 'bars', label: 'Bar', emoji: '🍸' },
+  { category: 'nightlife', label: 'Live music', emoji: '🎶' },
+  { category: 'fitness', label: 'Fitness', emoji: '💪' },
+  { category: 'markets', label: 'Market', emoji: '🧺' },
+  { category: 'entertainment', label: 'Other fun', emoji: '✨' },
+];

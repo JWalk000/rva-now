@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { createDigestSignup, createEventSubmission, fetchCuratedLists, fetchPublishedEvents } from '@/lib/api';
-import { filterPlacesByCategory, pullPlacesFromCommunity } from '@/lib/communityPlaces';
+import { coordsForNeighborhood, filterPlacesByCategory, pullPlacesFromCommunity } from '@/lib/communityPlaces';
 import { events as localEvents, lists as localLists, neighborhoods, timeWindows, vibes } from '@/lib/data';
 import { feedPosts as localFeedPosts } from '@/lib/feedData';
 import {
@@ -29,6 +29,22 @@ const PREFS_KEY = 'citipilot-prefs';
 const SAVED_KEY = 'citipilot-saved';
 const SAVED_PLACES_KEY = 'citipilot-saved-places';
 const USER_POSTS_KEY = 'citipilot-user-posts';
+const BUSINESS_PLACES_KEY = 'citipilot-business-places';
+const PENDING_PLACE_KEY = 'citipilot-pending-place';
+
+export type BusinessPlaceInput = {
+  name: string;
+  category: PlaceCategory;
+  subcategory: string;
+  neighborhood: string;
+  description: string;
+  emoji?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  website?: string;
+  contactEmail: string;
+};
 
 export type CreateSocialPostInput = Omit<
   FeedPost,
@@ -71,10 +87,13 @@ type AppContextValue = {
   ready: boolean;
   loading: boolean;
   savedPlaceIds: string[];
+  businessPlaces: Place[];
   getPlacesByCategory: (category?: PlaceCategory | 'all') => Place[];
   toggleSavedPlace: (id: string) => void;
   isPlaceSaved: (id: string) => boolean;
   createSocialPost: (input: CreateSocialPostInput) => FeedPost;
+  savePendingBusinessPlace: (input: BusinessPlaceInput) => Place;
+  activatePendingBusinessPlace: () => Place | null;
   refreshData: () => Promise<void>;
   toggleNeighborhood: (value: string) => void;
   toggleVibe: (value: string) => void;
@@ -110,6 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<RvaEvent[]>(localEvents);
   const [lists, setLists] = useState<CuratedList[]>(localLists);
   const [userPosts, setUserPosts] = useState<FeedPost[]>([]);
+  const [businessPlaces, setBusinessPlaces] = useState<Place[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -122,8 +142,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const places = useMemo(
-    () => pullPlacesFromCommunity({ posts: socialPosts, savedPlaceIds }),
-    [socialPosts, savedPlaceIds],
+    () =>
+      pullPlacesFromCommunity({
+        posts: socialPosts,
+        savedPlaceIds,
+        userAddedPlaces: businessPlaces,
+      }),
+    [socialPosts, savedPlaceIds, businessPlaces],
   );
 
   const refreshData = useCallback(async () => {
@@ -142,6 +167,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedIds(readJson(SAVED_KEY, []));
     setSavedPlaceIds(readJson(SAVED_PLACES_KEY, []));
     setUserPosts(readJson(USER_POSTS_KEY, []));
+    setBusinessPlaces(readJson(BUSINESS_PLACES_KEY, []));
     void refreshData().finally(() => setReady(true));
   }, [refreshData]);
 
@@ -228,6 +254,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return post;
   }, []);
 
+  const savePendingBusinessPlace = useCallback((input: BusinessPlaceInput) => {
+    const fallback = coordsForNeighborhood(input.neighborhood);
+    const place: Place = {
+      id: `biz-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: input.name.trim(),
+      category: input.category,
+      subcategory: input.subcategory.trim(),
+      neighborhood: input.neighborhood,
+      description: input.description.trim(),
+      emoji: input.emoji || '📍',
+      priceLevel: '$$',
+      lat: input.lat ?? fallback.lat,
+      lng: input.lng ?? fallback.lng,
+      source: 'business',
+      featured: true,
+      postCount: 0,
+      lastActiveAt: new Date().toISOString(),
+      recentHandles: [],
+      address: input.address?.trim() || undefined,
+      website: input.website?.trim() || undefined,
+      contactEmail: input.contactEmail.trim(),
+      subscriptionActive: false,
+    };
+    localStorage.setItem(PENDING_PLACE_KEY, JSON.stringify(place));
+    return place;
+  }, []);
+
+  const activatePendingBusinessPlace = useCallback(() => {
+    const pending = readJson<Place | null>(PENDING_PLACE_KEY, null);
+    if (!pending) return null;
+    const live: Place = { ...pending, subscriptionActive: true, featured: true, source: 'business' };
+    setBusinessPlaces((current) => {
+      const without = current.filter((p) => p.id !== live.id);
+      const next = [live, ...without];
+      localStorage.setItem(BUSINESS_PLACES_KEY, JSON.stringify(next));
+      return next;
+    });
+    localStorage.removeItem(PENDING_PLACE_KEY);
+    return live;
+  }, []);
+
   const signUpDigest = useCallback(async (contact: string, channel: 'email' | 'sms') => {
     const signup = await createDigestSignup(contact, channel);
     setDigest(signup);
@@ -259,10 +326,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ready,
     loading,
     savedPlaceIds,
+    businessPlaces,
     getPlacesByCategory,
     toggleSavedPlace,
     isPlaceSaved,
     createSocialPost,
+    savePendingBusinessPlace,
+    activatePendingBusinessPlace,
     refreshData,
     toggleNeighborhood,
     toggleVibe,

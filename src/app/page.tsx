@@ -9,7 +9,16 @@ import { HomePlaceCard } from '@/components/HomePlaceCard';
 import { useApp } from '@/context/AppProvider';
 import { placeCategoryLabels, type PlaceCategory } from '@/types/place';
 
-const PLACE_FILTERS: Array<PlaceCategory | 'all'> = ['all', 'eat', 'cafes', 'bars', 'shops', 'nightlife'];
+const PLACE_FILTERS: Array<PlaceCategory | 'all'> = [
+  'all',
+  'eat',
+  'cafes',
+  'bars',
+  'shops',
+  'nightlife',
+  'fitness',
+  'entertainment',
+];
 
 export default function HomePage() {
   const {
