@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { MapMarker } from '@/components/MapView';
 import { useApp } from '@/context/AppProvider';
@@ -62,6 +62,10 @@ export default function MapPage() {
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60_000 },
     );
   }, []);
+
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   const markers = useMemo<MapMarker[]>(() => {
     const eventMarkers: MapMarker[] = events.map((e) => ({

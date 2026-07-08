@@ -65,11 +65,29 @@ function MapCamera({
 }) {
   const map = useMap();
 
+  // Recenter button / fresh location request.
   useEffect(() => {
-    if (focusNearby && userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
-      return;
-    }
+    if (!userLocation || (recenterToken ?? 0) === 0) return;
+    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
+  }, [map, userLocation, recenterToken]);
+
+  // Nearby mode toggled on — center on user.
+  useEffect(() => {
+    if (!userLocation || !focusNearby) return;
+    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
+  }, [map, userLocation, focusNearby]);
+
+  // First time we get a user location, center on them.
+  useEffect(() => {
+    if (!userLocation) return;
+    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
+    // Only run when userLocation identity/coords change, not on marker/filter updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, userLocation?.lat, userLocation?.lng]);
+
+  // Without user location, fit visible markers or fall back to Richmond.
+  useEffect(() => {
+    if (userLocation) return;
 
     const valid = markers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
     if (!valid.length) {
@@ -82,7 +100,7 @@ function MapCamera({
     }
     const bounds = L.latLngBounds(valid.map((m) => [m.lat, m.lng] as [number, number]));
     map.fitBounds(bounds.pad(0.18), { animate: false });
-  }, [map, markers, userLocation, focusNearby, recenterToken]);
+  }, [map, markers, userLocation]);
 
   return null;
 }
