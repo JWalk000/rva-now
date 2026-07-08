@@ -48,13 +48,13 @@ Deno.serve(async (request) => {
         .from('business_places')
         .select('*', { count: 'exact', head: true })
         .eq('approved', false)
-        .neq('status', 'canceled'),
+        .not('stripe_subscription_id', 'is', null),
       supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'published'),
       supabase
         .from('business_places')
         .select('id, name, email, neighborhood, category, subcategory, status, approved, created_at')
         .eq('approved', false)
-        .neq('status', 'canceled')
+        .not('stripe_subscription_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(50),
       supabase
