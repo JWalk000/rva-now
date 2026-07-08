@@ -1,5 +1,6 @@
 import { events as localEvents, lists as localLists } from '@/lib/data';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import type { Place, PlaceCategory } from '@/types/place';
 import type {
   CuratedList,
   DigestSignup,
@@ -222,11 +223,98 @@ export async function createEventSubmission(
 
 export type CheckoutTier = 'featured' | 'subscription' | 'place_monthly' | 'business_place';
 
+export type PlaceCheckoutMeta = {
+  name: string;
+  category: PlaceCategory;
+  subcategory: string;
+  neighborhood: string;
+  description: string;
+  email: string;
+  website?: string;
+  address?: string;
+  emoji?: string;
+  lat?: number;
+  lng?: number;
+};
+
+type DbBusinessPlace = {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  neighborhood: string;
+  description: string;
+  email: string;
+  website: string | null;
+  address: string | null;
+  emoji: string;
+  lat: number;
+  lng: number;
+  status: string;
+  approved: boolean;
+  created_at: string;
+};
+
+function mapBusinessPlace(row: DbBusinessPlace): Place {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category as PlaceCategory,
+    subcategory: row.subcategory,
+    neighborhood: row.neighborhood,
+    description: row.description,
+    emoji: row.emoji || '📍',
+    priceLevel: '$$',
+    lat: row.lat,
+    lng: row.lng,
+    source: 'business',
+    featured: true,
+    postCount: 0,
+    lastActiveAt: row.created_at,
+    recentHandles: [],
+    address: row.address ?? undefined,
+    website: row.website ?? undefined,
+    contactEmail: row.email,
+    subscriptionActive: row.status === 'active' && row.approved,
+  };
+}
+
+export async function fetchBusinessPlaces(): Promise<Place[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('business_places')
+    .select('*')
+    .eq('status', 'active')
+    .eq('approved', true)
+    .order('created_at', { ascending: false });
+
+  if (error || !data?.length) return [];
+  return data.map((row) => mapBusinessPlace(row as DbBusinessPlace));
+}
+
+export async function fetchBusinessPlaceById(id: string): Promise<Place | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('business_places')
+    .select('*')
+    .eq('id', id)
+    .eq('status', 'active')
+    .eq('approved', true)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapBusinessPlace(data as DbBusinessPlace);
+}
+
 export async function createCheckoutSession(
   submissionId: string,
   tier: CheckoutTier,
   origin: string,
-  options?: { successPath?: string; cancelPath?: string },
+  options?: { successPath?: string; cancelPath?: string; place?: PlaceCheckoutMeta },
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!url) throw new Error('Supabase URL not configured');
@@ -243,11 +331,93 @@ export async function createCheckoutSession(
       tier,
       success_url: `${origin}${successPath}`,
       cancel_url: `${origin}${cancelPath}`,
+      place: options?.place,
     }),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Checkout failed');
   return json.url as string;
+}
+
+export type AdminDashboard = {
+  stats: {
+    totalPlaces: number;
+    activePlaces: number;
+    pendingPlaces: number;
+    eventCount: number;
+  };
+  pending: Array<{
+    id: string;
+    name: string;
+    email: string;
+    neighborhood: string;
+    category: string;
+    subcategory: string;
+    status: string;
+    approved: boolean;
+    created_at: string;
+  }>;
+  active: Array<{
+    id: string;
+    name: string;
+    email: string;
+    neighborhood: string;
+    category: string;
+    subcategory: string;
+    status: string;
+    approved: boolean;
+    created_at: string;
+    stripe_subscription_id: string | null;
+  }>;
+};
+
+export async function verifyAdminSecret(secret: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return false;
+  const res = await fetch(`${url}/functions/v1/admin-api`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-secret': secret,
+    },
+    body: JSON.stringify({ action: 'verify' }),
+  });
+  return res.ok;
+}
+
+export async function fetchAdminDashboard(secret: string): Promise<AdminDashboard> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error('Supabase URL not configured');
+  const res = await fetch(`${url}/functions/v1/admin-api`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-secret': secret,
+    },
+    body: JSON.stringify({ action: 'dashboard' }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Admin request failed');
+  return json as AdminDashboard;
+}
+
+export async function moderateBusinessPlace(
+  secret: string,
+  placeId: string,
+  action: 'approve' | 'reject',
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error('Supabase URL not configured');
+  const res = await fetch(`${url}/functions/v1/approve-business-place`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-secret': secret,
+    },
+    body: JSON.stringify({ place_id: placeId, action }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Moderation failed');
 }
 
 export function isBackendConfigured() {

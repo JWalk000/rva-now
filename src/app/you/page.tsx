@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 
 import { useApp } from '@/context/AppProvider';
-import { createCheckoutSession } from '@/lib/api';
+import { createCheckoutSession, fetchBusinessPlaceById } from '@/lib/api';
 import { businessPlaceSubcategories } from '@/types/place';
 
 function Chip({
@@ -51,8 +51,9 @@ function YouPageInner() {
     signUpDigest,
     digest,
     businessPlaces,
+    myPlaceIds,
     savePendingBusinessPlace,
-    activatePendingBusinessPlace,
+    refreshBusinessPlaces,
   } = useApp();
 
   const initialTab: YouTab =
@@ -60,8 +61,13 @@ function YouPageInner() {
   const [tab, setTab] = useState<YouTab>(initialTab);
   const [digestEmail, setDigestEmail] = useState('');
   const [digestStatus, setDigestStatus] = useState('');
+  const [activatedPlace, setActivatedPlace] = useState<{ name: string } | null>(null);
   const [paidBanner, setPaidBanner] = useState<'success' | 'cancel' | null>(null);
-  const [status, setStatus] = useState('');
+
+  const myListings = useMemo(
+    () => businessPlaces.filter((place) => myPlaceIds.includes(place.id)),
+    [businessPlaces, myPlaceIds],
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const [name, setName] = useState('');
@@ -80,23 +86,40 @@ function YouPageInner() {
     [subcategoryLabel],
   );
 
+  const [status, setStatus] = useState('');
+
   useEffect(() => {
     const paid = searchParams.get('paid');
     const business = searchParams.get('business') === '1' || searchParams.get('tab') === 'business';
     if (business) setTab('business');
     if (paid === '1') {
-      const activated = activatePendingBusinessPlace();
       setPaidBanner('success');
-      setStatus(
-        activated
-          ? `${activated.name} is live on the map and Around Town.`
-          : 'Payment received. Your place listing is active.',
-      );
+      const placeId = searchParams.get('place_id');
+      void (async () => {
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          await refreshBusinessPlaces();
+          if (placeId) {
+            const found = await fetchBusinessPlaceById(placeId);
+            if (found) {
+              setActivatedPlace({ name: found.name });
+              setStatus(`${found.name} is live on the map and Around Town.`);
+              localStorage.removeItem('citipilot-pending-place');
+              return;
+            }
+          } else if (attempt > 2) {
+            setStatus('Payment received. Your place listing is active.');
+            localStorage.removeItem('citipilot-pending-place');
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        setStatus('Payment received. Your listing may take a moment to appear.');
+      })();
     } else if (paid === '0') {
       setPaidBanner('cancel');
       setStatus('Checkout canceled. Your draft was kept — submit again when ready.');
     }
-  }, [searchParams, activatePendingBusinessPlace]);
+  }, [searchParams, refreshBusinessPlaces]);
 
   async function handleDigest(e: React.FormEvent) {
     e.preventDefault();
@@ -129,8 +152,21 @@ function YouPageInner() {
       });
 
       const checkoutUrl = await createCheckoutSession(place.id, 'place_monthly', window.location.origin, {
-        successPath: '/you?business=1&paid=1',
+        successPath: `/you?business=1&paid=1&place_id=${encodeURIComponent(place.id)}`,
         cancelPath: '/you?business=1&paid=0',
+        place: {
+          name: place.name,
+          category: place.category,
+          subcategory: place.subcategory,
+          neighborhood: place.neighborhood,
+          description: place.description,
+          email: place.contactEmail ?? email,
+          website: place.website,
+          address: place.address,
+          emoji: place.emoji,
+          lat: place.lat,
+          lng: place.lng,
+        },
       });
       window.location.href = checkoutUrl;
     } catch (error) {
@@ -152,7 +188,7 @@ function YouPageInner() {
             {[
               { label: 'Saved', value: savedIds.length },
               { label: 'Tickets', value: 0 },
-              { label: 'Places', value: businessPlaces.length },
+              { label: 'Places', value: myListings.length },
             ].map((stat) => (
               <p key={stat.label} className="text-white/55">
                 <span className="font-[family-name:var(--font-display)] text-xl font-extrabold text-white">
@@ -319,18 +355,18 @@ function YouPageInner() {
 
             {paidBanner === 'success' ? (
               <p className="text-sm font-semibold text-[#2F6B52]">
-                Payment received. {status || 'Your place is live.'}
+                Payment received. {status || (activatedPlace ? `${activatedPlace.name} is live.` : 'Your place is live.')}
               </p>
             ) : null}
             {paidBanner === 'cancel' ? (
               <p className="text-sm font-semibold text-[#9E3A24]">{status}</p>
             ) : null}
 
-            {businessPlaces.length > 0 ? (
+            {myListings.length > 0 ? (
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#8A8490]">Your listings</h3>
                 <ul className="divide-y divide-[#DED8D0] border-y border-[#DED8D0]">
-                  {businessPlaces.map((place) => (
+                  {myListings.map((place) => (
                     <li key={place.id} className="flex items-baseline justify-between gap-4 py-3">
                       <div className="min-w-0">
                         <p className="truncate font-bold text-[#14121A]">

@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { createDigestSignup, createEventSubmission, fetchCuratedLists, fetchPublishedEvents } from '@/lib/api';
+import { createDigestSignup, createEventSubmission, fetchBusinessPlaces, fetchCuratedLists, fetchPublishedEvents } from '@/lib/api';
 import { coordsForNeighborhood, filterPlacesByCategory, pullPlacesFromCommunity } from '@/lib/communityPlaces';
 import { events as localEvents, lists as localLists, neighborhoods, timeWindows, vibes } from '@/lib/data';
 import { feedPosts as localFeedPosts } from '@/lib/feedData';
@@ -29,7 +29,7 @@ const PREFS_KEY = 'citipilot-prefs';
 const SAVED_KEY = 'citipilot-saved';
 const SAVED_PLACES_KEY = 'citipilot-saved-places';
 const USER_POSTS_KEY = 'citipilot-user-posts';
-const BUSINESS_PLACES_KEY = 'citipilot-business-places';
+const MY_PLACE_IDS_KEY = 'citipilot-my-place-ids';
 const PENDING_PLACE_KEY = 'citipilot-pending-place';
 
 export type BusinessPlaceInput = {
@@ -88,12 +88,13 @@ type AppContextValue = {
   loading: boolean;
   savedPlaceIds: string[];
   businessPlaces: Place[];
+  myPlaceIds: string[];
   getPlacesByCategory: (category?: PlaceCategory | 'all') => Place[];
   toggleSavedPlace: (id: string) => void;
   isPlaceSaved: (id: string) => boolean;
   createSocialPost: (input: CreateSocialPostInput) => FeedPost;
   savePendingBusinessPlace: (input: BusinessPlaceInput) => Place;
-  activatePendingBusinessPlace: () => Place | null;
+  refreshBusinessPlaces: () => Promise<Place[]>;
   refreshData: () => Promise<void>;
   toggleNeighborhood: (value: string) => void;
   toggleVibe: (value: string) => void;
@@ -130,6 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lists, setLists] = useState<CuratedList[]>(localLists);
   const [userPosts, setUserPosts] = useState<FeedPost[]>([]);
   const [businessPlaces, setBusinessPlaces] = useState<Place[]>([]);
+  const [myPlaceIds, setMyPlaceIds] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -151,12 +153,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [socialPosts, savedPlaceIds, businessPlaces],
   );
 
+  const refreshBusinessPlaces = useCallback(async () => {
+    const places = await fetchBusinessPlaces();
+    setBusinessPlaces(places);
+    return places;
+  }, []);
+
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-      const [eventResult, listResult] = await Promise.all([fetchPublishedEvents(), fetchCuratedLists()]);
+      const [eventResult, listResult, dbPlaces] = await Promise.all([
+        fetchPublishedEvents(),
+        fetchCuratedLists(),
+        fetchBusinessPlaces(),
+      ]);
       setEvents(eventResult.events);
       setLists(listResult.lists);
+      setBusinessPlaces(dbPlaces);
     } finally {
       setLoading(false);
     }
@@ -167,7 +180,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedIds(readJson(SAVED_KEY, []));
     setSavedPlaceIds(readJson(SAVED_PLACES_KEY, []));
     setUserPosts(readJson(USER_POSTS_KEY, []));
-    setBusinessPlaces(readJson(BUSINESS_PLACES_KEY, []));
+    setMyPlaceIds(readJson(MY_PLACE_IDS_KEY, []));
     void refreshData().finally(() => setReady(true));
   }, [refreshData]);
 
@@ -278,21 +291,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       subscriptionActive: false,
     };
     localStorage.setItem(PENDING_PLACE_KEY, JSON.stringify(place));
-    return place;
-  }, []);
-
-  const activatePendingBusinessPlace = useCallback(() => {
-    const pending = readJson<Place | null>(PENDING_PLACE_KEY, null);
-    if (!pending) return null;
-    const live: Place = { ...pending, subscriptionActive: true, featured: true, source: 'business' };
-    setBusinessPlaces((current) => {
-      const without = current.filter((p) => p.id !== live.id);
-      const next = [live, ...without];
-      localStorage.setItem(BUSINESS_PLACES_KEY, JSON.stringify(next));
+    setMyPlaceIds((current) => {
+      const next = current.includes(place.id) ? current : [place.id, ...current];
+      localStorage.setItem(MY_PLACE_IDS_KEY, JSON.stringify(next));
       return next;
     });
-    localStorage.removeItem(PENDING_PLACE_KEY);
-    return live;
+    return place;
   }, []);
 
   const signUpDigest = useCallback(async (contact: string, channel: 'email' | 'sms') => {
@@ -327,12 +331,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loading,
     savedPlaceIds,
     businessPlaces,
+    myPlaceIds,
     getPlacesByCategory,
     toggleSavedPlace,
     isPlaceSaved,
     createSocialPost,
     savePendingBusinessPlace,
-    activatePendingBusinessPlace,
+    refreshBusinessPlaces,
     refreshData,
     toggleNeighborhood,
     toggleVibe,
