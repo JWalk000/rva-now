@@ -2,11 +2,16 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MapMarker } from '@/components/MapView';
 import { useApp } from '@/context/AppProvider';
-import { distanceMiles, formatDistanceMiles, type UserLocation } from '@/lib/location';
+import {
+  distanceMiles,
+  formatDistanceMiles,
+  LOCATION_STORAGE_KEY,
+  type UserLocation,
+} from '@/lib/location';
 import { placeCategoryLabels, type PlaceCategory } from '@/types/place';
 
 const FILTERS: Array<'events' | PlaceCategory | 'all'> = [
@@ -21,6 +26,11 @@ const FILTERS: Array<'events' | PlaceCategory | 'all'> = [
   'entertainment',
 ];
 
+const RADIUS_MIN = 1;
+const RADIUS_MAX = 25;
+const RADIUS_DEFAULT = 5;
+const RADIUS_STORAGE_KEY = 'citipilot-search-radius';
+
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,
   loading: () => (
@@ -32,40 +42,118 @@ const MapView = dynamic(() => import('@/components/MapView'), {
 
 type LocStatus = 'idle' | 'loading' | 'ready' | 'denied' | 'unavailable' | 'error';
 
+function readStoredLocation(): UserLocation | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(LOCATION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as UserLocation;
+    if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) return parsed;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function readStoredRadius(): number {
+  if (typeof window === 'undefined') return RADIUS_DEFAULT;
+  try {
+    const raw = sessionStorage.getItem(RADIUS_STORAGE_KEY);
+    if (!raw) return RADIUS_DEFAULT;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= RADIUS_MIN && n <= RADIUS_MAX) return n;
+  } catch {
+    /* ignore */
+  }
+  return RADIUS_DEFAULT;
+}
+
 export default function MapPage() {
   const { events, places } = useApp();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all');
   const [selected, setSelected] = useState<{ type: 'event' | 'place'; id: string } | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locStatus, setLocStatus] = useState<LocStatus>('idle');
-  const [nearbyOnly, setNearbyOnly] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(RADIUS_DEFAULT);
   const [recenterToken, setRecenterToken] = useState(0);
+  const watchIdRef = useRef<number | null>(null);
 
-  const requestLocation = useCallback(() => {
+  const persistLocation = useCallback((loc: UserLocation) => {
+    setUserLocation(loc);
+    try {
+      sessionStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const handleGeoError = useCallback((err: GeolocationPositionError) => {
+    if (err.code === err.PERMISSION_DENIED) setLocStatus('denied');
+    else if (err.code === err.POSITION_UNAVAILABLE) setLocStatus('unavailable');
+    else setLocStatus('error');
+  }, []);
+
+  const requestLocation = useCallback((background = false) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLocStatus('unavailable');
       return;
     }
-    setLocStatus('loading');
+    if (!background) setLocStatus('loading');
+
+    if (watchIdRef.current != null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        persistLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocStatus('ready');
-        setNearbyOnly(true);
-        setRecenterToken((n) => n + 1);
+        if (!background) setRecenterToken((n) => n + 1);
       },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) setLocStatus('denied');
-        else if (err.code === err.POSITION_UNAVAILABLE) setLocStatus('unavailable');
-        else setLocStatus('error');
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60_000 },
+      handleGeoError,
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, []);
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        persistLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocStatus('ready');
+      },
+      () => {
+        /* keep last known position on watch errors */
+      },
+      { enableHighAccuracy: true, maximumAge: 30_000 },
+    );
+  }, [persistLocation, handleGeoError]);
 
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+    const stored = readStoredLocation();
+    const radius = readStoredRadius();
+    setSearchRadius(radius);
+    if (stored) {
+      setUserLocation(stored);
+      setLocStatus('ready');
+      requestLocation(true);
+    } else {
+      requestLocation(false);
+    }
+    return () => {
+      if (watchIdRef.current != null && typeof navigator !== 'undefined') {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRadiusChange = useCallback((value: number) => {
+    setSearchRadius(value);
+    try {
+      sessionStorage.setItem(RADIUS_STORAGE_KEY, String(value));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const markers = useMemo<MapMarker[]>(() => {
     const eventMarkers: MapMarker[] = events.map((e) => ({
@@ -100,34 +188,32 @@ export default function MapPage() {
     });
 
     if (userLocation) {
-      list = [...list].sort(
-        (a, b) => (a.distanceMiles ?? Infinity) - (b.distanceMiles ?? Infinity),
-      );
-    }
-
-    if (nearbyOnly && userLocation) {
-      const near = list.filter((m) => (m.distanceMiles ?? Infinity) <= 5);
-      if (near.length) list = near;
+      list = list
+        .filter((m) => (m.distanceMiles ?? Infinity) <= searchRadius)
+        .sort((a, b) => (a.distanceMiles ?? Infinity) - (b.distanceMiles ?? Infinity));
     }
 
     return list;
-  }, [markers, filter, userLocation, nearbyOnly]);
+  }, [markers, filter, userLocation, searchRadius]);
 
   const nearbyList = useMemo(() => {
     if (!userLocation) return [];
     return [...markers]
+      .filter((m) => (m.distanceMiles ?? Infinity) <= searchRadius)
       .sort((a, b) => (a.distanceMiles ?? Infinity) - (b.distanceMiles ?? Infinity))
       .slice(0, 8);
-  }, [markers, userLocation]);
+  }, [markers, userLocation, searchRadius]);
 
   const active = selected
     ? visible.find((m) => m.id === selected.id && m.type === selected.type) ??
       markers.find((m) => m.id === selected.id && m.type === selected.type)
     : null;
 
+  const locationPending = locStatus === 'idle' || locStatus === 'loading';
+
   const locationMessage =
     locStatus === 'denied'
-      ? 'Location permission denied. Enable it in your browser settings, then try again.'
+      ? 'Location permission denied. Enable it in your browser settings, then tap Use my location.'
       : locStatus === 'unavailable'
         ? 'Location isn’t available on this device or browser.'
         : locStatus === 'error'
@@ -149,7 +235,7 @@ export default function MapPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={requestLocation}
+              onClick={() => requestLocation(false)}
               disabled={locStatus === 'loading'}
               className="rounded-full bg-[#C44B2F] px-4 py-2 text-xs font-extrabold text-white transition hover:bg-[#9E3A24] disabled:opacity-60"
             >
@@ -160,30 +246,13 @@ export default function MapPage() {
                   : 'Use my location'}
             </button>
             {locStatus === 'ready' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNearbyOnly((v) => !v);
-                    if (!nearbyOnly) setRecenterToken((n) => n + 1);
-                  }}
-                  className={`rounded-full px-3 py-2 text-xs font-bold transition ${
-                    nearbyOnly ? 'bg-white text-[#14121A]' : 'bg-white/10 text-white/75 hover:bg-white/15'
-                  }`}
-                >
-                  Show nearby
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNearbyOnly(true);
-                    setRecenterToken((n) => n + 1);
-                  }}
-                  className="rounded-full border border-white/20 px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10"
-                >
-                  Recenter
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setRecenterToken((n) => n + 1)}
+                className="rounded-full border border-white/20 px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10"
+              >
+                Recenter
+              </button>
             ) : null}
           </div>
 
@@ -198,10 +267,41 @@ export default function MapPage() {
           ) : null}
           {locStatus === 'ready' && userLocation ? (
             <p className="mt-3 text-xs text-white/50">
-              Showing distances from your location
-              {nearbyOnly ? ' · nearby within ~5 mi' : ''}.
+              Showing spots within {searchRadius} mi of your location.
             </p>
           ) : null}
+
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <label
+              htmlFor="search-radius"
+              className={`flex items-center justify-between text-xs font-bold ${
+                userLocation ? 'text-white/80' : 'text-white/40'
+              }`}
+            >
+              <span>Search radius</span>
+              <span className="text-[#C44B2F]">{searchRadius} mi</span>
+            </label>
+            <input
+              id="search-radius"
+              type="range"
+              min={RADIUS_MIN}
+              max={RADIUS_MAX}
+              step={1}
+              value={searchRadius}
+              disabled={!userLocation}
+              onChange={(e) => handleRadiusChange(Number(e.target.value))}
+              className="mt-2 w-full accent-[#C44B2F] disabled:opacity-40"
+            />
+            <div className="mt-1 flex justify-between text-[10px] font-semibold text-white/35">
+              <span>{RADIUS_MIN} mi</span>
+              <span>{RADIUS_MAX} mi</span>
+            </div>
+            {!userLocation ? (
+              <p className="mt-2 text-[10px] font-semibold text-white/40">
+                Enable location to adjust search radius.
+              </p>
+            ) : null}
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
             {FILTERS.map((item) => (
@@ -244,7 +344,9 @@ export default function MapPage() {
 
         {nearbyList.length > 0 ? (
           <div className="mb-2 px-5 sm:px-6">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/40">Closest to you</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/40">
+              Nearby · within {searchRadius} mi
+            </p>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {nearbyList.map((marker) => (
                 <button
@@ -266,7 +368,7 @@ export default function MapPage() {
         <div className="hidden max-h-[40vh] flex-1 overflow-y-auto px-5 pb-6 sm:px-6 lg:block lg:max-h-none">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/40">
             {visible.length} location{visible.length === 1 ? '' : 's'}
-            {userLocation ? ' · sorted by distance' : ''}
+            {userLocation ? ` · within ${searchRadius} mi` : ''}
           </p>
           <div className="space-y-2">
             {visible.slice(0, 40).map((marker) => {
@@ -306,16 +408,14 @@ export default function MapPage() {
           selected={selected}
           onSelect={(marker) => setSelected({ type: marker.type, id: marker.id })}
           userLocation={userLocation}
-          focusNearby={Boolean(userLocation && nearbyOnly)}
+          locationPending={locationPending}
+          searchRadiusMiles={searchRadius}
           recenterToken={recenterToken}
         />
         {locStatus === 'ready' ? (
           <button
             type="button"
-            onClick={() => {
-              setNearbyOnly(true);
-              setRecenterToken((n) => n + 1);
-            }}
+            onClick={() => setRecenterToken((n) => n + 1)}
             className="absolute bottom-5 right-5 z-[500] rounded-full border border-white/20 bg-[#14121A]/95 px-4 py-2.5 text-xs font-bold text-white shadow-lg backdrop-blur hover:bg-[#1C1A24]"
           >
             Recenter on me
@@ -323,10 +423,10 @@ export default function MapPage() {
         ) : (
           <button
             type="button"
-            onClick={requestLocation}
+            onClick={() => requestLocation(false)}
             className="absolute bottom-5 right-5 z-[500] rounded-full bg-[#C44B2F] px-4 py-2.5 text-xs font-extrabold text-white shadow-lg hover:bg-[#9E3A24]"
           >
-            Show nearby
+            Use my location
           </button>
         )}
       </div>

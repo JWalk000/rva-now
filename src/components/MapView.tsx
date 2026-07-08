@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { Circle, CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import type { UserLocation } from '@/lib/location';
+import { zoomForRadiusMiles, type UserLocation } from '@/lib/location';
 
 export type MapMarker = {
   type: 'event' | 'place';
@@ -25,13 +25,14 @@ type Props = {
   selected: { type: 'event' | 'place'; id: string } | null;
   onSelect: (marker: MapMarker) => void;
   userLocation?: UserLocation | null;
-  /** When true, center on user and zoom nearby instead of fitting all markers. */
-  focusNearby?: boolean;
+  /** True while geolocation is still resolving — skip fitBounds on markers. */
+  locationPending?: boolean;
+  searchRadiusMiles?: number;
   recenterToken?: number;
 };
 
 const RVA_CENTER: [number, number] = [37.5407, -77.436];
-const NEARBY_ZOOM = 13;
+const DEFAULT_ZOOM = 13;
 
 function makeIcon(type: 'event' | 'place', active: boolean) {
   const color = active ? '#C44B2F' : type === 'event' ? '#D4922A' : '#2F6B52';
@@ -55,43 +56,46 @@ function makeIcon(type: 'event' | 'place', active: boolean) {
 function MapCamera({
   markers,
   userLocation,
-  focusNearby,
+  locationPending,
+  searchRadiusMiles = 5,
   recenterToken,
 }: {
   markers: MapMarker[];
   userLocation?: UserLocation | null;
-  focusNearby?: boolean;
+  locationPending?: boolean;
+  searchRadiusMiles?: number;
   recenterToken?: number;
 }) {
   const map = useMap();
+  const userCenteredRef = useRef(false);
 
-  // Recenter button / fresh location request.
-  useEffect(() => {
-    if (!userLocation || (recenterToken ?? 0) === 0) return;
-    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
-  }, [map, userLocation, recenterToken]);
-
-  // Nearby mode toggled on — center on user.
-  useEffect(() => {
-    if (!userLocation || !focusNearby) return;
-    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
-  }, [map, userLocation, focusNearby]);
-
-  // First time we get a user location, center on them.
+  // Center on user whenever we have a location (initial fix, recenter, radius change).
   useEffect(() => {
     if (!userLocation) return;
-    map.setView([userLocation.lat, userLocation.lng], NEARBY_ZOOM, { animate: true });
-    // Only run when userLocation identity/coords change, not on marker/filter updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, userLocation?.lat, userLocation?.lng]);
+    const zoom = zoomForRadiusMiles(searchRadiusMiles);
+    map.setView([userLocation.lat, userLocation.lng], zoom, { animate: userCenteredRef.current });
+    userCenteredRef.current = true;
+  }, [map, userLocation?.lat, userLocation?.lng, searchRadiusMiles]);
 
-  // Without user location, fit visible markers or fall back to Richmond.
+  // Explicit recenter button — always animate.
   useEffect(() => {
-    if (userLocation) return;
+    if (!userLocation || (recenterToken ?? 0) === 0) return;
+    const zoom = zoomForRadiusMiles(searchRadiusMiles);
+    map.setView([userLocation.lat, userLocation.lng], zoom, { animate: true });
+    userCenteredRef.current = true;
+  }, [map, userLocation, recenterToken, searchRadiusMiles]);
+
+  // Without user location: wait for geolocation before fitting markers (prevents Ashland jump).
+  useEffect(() => {
+    if (userLocation || userCenteredRef.current) return;
+    if (locationPending) {
+      map.setView(RVA_CENTER, DEFAULT_ZOOM, { animate: false });
+      return;
+    }
 
     const valid = markers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
     if (!valid.length) {
-      map.setView(RVA_CENTER, 12);
+      map.setView(RVA_CENTER, DEFAULT_ZOOM);
       return;
     }
     if (valid.length === 1) {
@@ -99,8 +103,8 @@ function MapCamera({
       return;
     }
     const bounds = L.latLngBounds(valid.map((m) => [m.lat, m.lng] as [number, number]));
-    map.fitBounds(bounds.pad(0.18), { animate: false });
-  }, [map, markers, userLocation]);
+    map.fitBounds(bounds.pad(0.12), { animate: false, maxZoom: 13 });
+  }, [map, markers, userLocation, locationPending]);
 
   return null;
 }
@@ -110,7 +114,8 @@ export default function MapView({
   selected,
   onSelect,
   userLocation,
-  focusNearby,
+  locationPending = false,
+  searchRadiusMiles = 5,
   recenterToken = 0,
 }: Props) {
   const icons = useMemo(() => {
@@ -122,10 +127,16 @@ export default function MapView({
     };
   }, []);
 
+  const initialCenter: [number, number] = userLocation
+    ? [userLocation.lat, userLocation.lng]
+    : RVA_CENTER;
+  const initialZoom = userLocation ? zoomForRadiusMiles(searchRadiusMiles) : DEFAULT_ZOOM;
+  const radiusMeters = searchRadiusMiles * 1609.34;
+
   return (
     <MapContainer
-      center={RVA_CENTER}
-      zoom={12}
+      center={initialCenter}
+      zoom={initialZoom}
       className="h-full w-full"
       scrollWheelZoom
       style={{ background: '#0B0A10' }}
@@ -137,27 +148,41 @@ export default function MapView({
       <MapCamera
         markers={markers}
         userLocation={userLocation}
-        focusNearby={focusNearby}
+        locationPending={locationPending}
+        searchRadiusMiles={searchRadiusMiles}
         recenterToken={recenterToken}
       />
       {userLocation ? (
-        <CircleMarker
-          center={[userLocation.lat, userLocation.lng]}
-          radius={10}
-          pathOptions={{
-            color: '#fff',
-            weight: 3,
-            fillColor: '#3B82F6',
-            fillOpacity: 1,
-          }}
-        >
-          <Popup>
-            <div className="min-w-[120px] text-[#14121A]">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[#3B82F6]">You</p>
-              <p className="mt-0.5 text-sm font-extrabold">Your location</p>
-            </div>
-          </Popup>
-        </CircleMarker>
+        <>
+          <Circle
+            center={[userLocation.lat, userLocation.lng]}
+            radius={radiusMeters}
+            pathOptions={{
+              color: '#3B82F6',
+              weight: 2,
+              fillColor: '#3B82F6',
+              fillOpacity: 0.08,
+              dashArray: '6 4',
+            }}
+          />
+          <CircleMarker
+            center={[userLocation.lat, userLocation.lng]}
+            radius={10}
+            pathOptions={{
+              color: '#fff',
+              weight: 3,
+              fillColor: '#3B82F6',
+              fillOpacity: 1,
+            }}
+          >
+            <Popup>
+              <div className="min-w-[120px] text-[#14121A]">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-[#3B82F6]">You</p>
+                <p className="mt-0.5 text-sm font-extrabold">Your location</p>
+              </div>
+            </Popup>
+          </CircleMarker>
+        </>
       ) : null}
       {markers.map((marker) => {
         if (!Number.isFinite(marker.lat) || !Number.isFinite(marker.lng)) return null;

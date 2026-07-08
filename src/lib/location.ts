@@ -21,3 +21,12 @@ export function formatDistanceMiles(miles: number): string {
 export function sortByDistance<T extends LatLng>(items: T[], location: UserLocation): T[] {
   return [...items].sort((a, b) => distanceMiles(a, location) - distanceMiles(b, location));
 }
+
+/** Leaflet zoom level that roughly frames a circular search radius around the user. */
+export function zoomForRadiusMiles(miles: number): number {
+  const clamped = Math.max(1, Math.min(25, miles));
+  const zoom = 14 - Math.log2(clamped);
+  return Math.round(Math.max(10, Math.min(15, zoom)));
+}
+
+export const LOCATION_STORAGE_KEY = 'citipilot-user-location';
