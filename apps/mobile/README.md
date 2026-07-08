@@ -1,4 +1,4 @@
-# RVA Now — iOS App
+# Citipilot — iOS App
 
 Mobile-first MVP for discovering what's happening in Richmond.
 

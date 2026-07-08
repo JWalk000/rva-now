@@ -89,7 +89,7 @@ export async function fetchPublishedEvents(): Promise<{ events: RvaEvent[]; sour
     .order('trending_score', { ascending: false });
 
   if (error || !data?.length) {
-    console.warn('[RVA Now] Using local events fallback:', error?.message);
+    console.warn('[Citipilot] Using local events fallback:', error?.message);
     return { events: localEvents, source: 'local' };
   }
 
@@ -106,7 +106,7 @@ export async function fetchCuratedLists(): Promise<{ lists: CuratedList[]; sourc
     .order('sort_order', { ascending: true });
 
   if (error || !data?.length) {
-    console.warn('[RVA Now] Using local lists fallback:', error?.message);
+    console.warn('[Citipilot] Using local lists fallback:', error?.message);
     return { lists: localLists, source: 'local' };
   }
 
@@ -127,7 +127,7 @@ export async function fetchSubmissionsByEmail(email: string): Promise<EventSubmi
     .limit(20);
 
   if (error || !data) {
-    console.warn('[RVA Now] Could not load submissions:', error?.message);
+    console.warn('[Citipilot] Could not load submissions:', error?.message);
     return [];
   }
 
@@ -236,8 +236,8 @@ export async function createCheckoutSession(submissionId: string, tier: 'feature
     body: JSON.stringify({
       submission_id: submissionId,
       tier,
-      success_url: 'rvanow://submit?paid=1',
-      cancel_url: 'rvanow://submit?paid=0',
+      success_url: 'citipilot://submit?paid=1',
+      cancel_url: 'citipilot://submit?paid=0',
     }),
   });
   const json = await res.json();

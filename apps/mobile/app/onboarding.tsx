@@ -22,7 +22,7 @@ export default function OnboardingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>Welcome to RVA Now</Text>
+      <Text style={styles.eyebrow}>Welcome to Citipilot</Text>
       <Text style={styles.title}>Tell us your RVA</Text>
       <Text style={styles.subtitle}>
         Pick neighborhoods and interests so we can surface what’s actually relevant to you.

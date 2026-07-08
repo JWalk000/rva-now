@@ -65,7 +65,7 @@ export async function fulfillTicketOrder(orderId: string) {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const walletBaseUrl = `${supabaseUrl}/functions/v1/wallet-pass`;
-  const appBaseUrl = 'rvanow:/';
+  const appBaseUrl = 'citipilot:/';
 
   const html = buildTicketEmailHtml(tickets ?? [], walletBaseUrl, appBaseUrl);
   const emailResult = await sendTicketEmail(

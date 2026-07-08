@@ -1,6 +1,6 @@
-# RVA Now
+# Citipilot
 
-RVA Now is a website-first, app-second local discovery platform for Richmond, Virginia (RVA).
+Citipilot is a website-first, app-second local discovery platform for Richmond, Virginia (RVA).
 
 The goal is to help people quickly find what is happening nearby through a more useful experience than a generic event calendar:
 - hyperlocal neighborhood discovery
@@ -14,7 +14,7 @@ The goal is to help people quickly find what is happening nearby through a more 
 
 ## Product vision
 
-RVA Now is designed to become the fastest way to discover what is happening in Richmond by combining:
+Citipilot is designed to become the fastest way to discover what is happening in Richmond by combining:
 1. **Aggregation** — bringing local happenings into one place
 2. **Personalization** — ranking events based on neighborhoods and vibe preferences
 3. **Neighborhood-first discovery** — making Richmond feel browsable by area, not just by date

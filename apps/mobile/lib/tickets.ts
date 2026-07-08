@@ -106,8 +106,8 @@ export async function createTicketCheckout(
       ticket_type_id: ticketTypeId,
       quantity,
       buyer_email: buyerEmail,
-      success_url: `rvanow://ticket-order?paid=1&event=${eventSlug}`,
-      cancel_url: `rvanow://event/${eventSlug}?paid=0`,
+      success_url: `citipilot://ticket-order?paid=1&event=${eventSlug}`,
+      cancel_url: `citipilot://event/${eventSlug}?paid=0`,
     }),
   });
   const json = await res.json();
@@ -124,7 +124,7 @@ export async function createConnectLink(email: string): Promise<string> {
     },
     body: JSON.stringify({
       email,
-      return_url: 'rvanow://submit?connect=done',
+      return_url: 'citipilot://submit?connect=done',
     }),
   });
   const json = await res.json();

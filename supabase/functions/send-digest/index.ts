@@ -15,7 +15,7 @@ Deno.serve(async (request) => {
     }
 
     const resendKey = Deno.env.get('RESEND_API_KEY');
-    const fromEmail = Deno.env.get('DIGEST_FROM_EMAIL') ?? 'digest@rva-now.local';
+    const fromEmail = Deno.env.get('DIGEST_FROM_EMAIL') ?? 'digest@citipilot.local';
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -39,7 +39,7 @@ Deno.serve(async (request) => {
       .map((e) => `• ${e.title} — ${e.day_label} ${e.time_label} @ ${e.venue} (${e.neighborhood})`)
       .join('\n');
 
-    const body = `Your RVA weekend picks:\n\n${eventLines || 'Check RVA Now for fresh listings.'}\n\n— RVA Now`;
+    const body = `Your RVA weekend picks:\n\n${eventLines || 'Check Citipilot for fresh listings.'}\n\n— Citipilot`;
 
     let sent = 0;
     const errors: string[] = [];
@@ -60,7 +60,7 @@ Deno.serve(async (request) => {
         body: JSON.stringify({
           from: fromEmail,
           to: signup.contact,
-          subject: 'Your RVA weekend — RVA Now',
+          subject: 'Your RVA weekend — Citipilot',
           text: body,
         }),
       });

@@ -83,7 +83,7 @@ Deno.serve(async (request) => {
       .single();
 
     if (!event?.sells_tickets || event.source_platform !== 'submission') {
-      return new Response(JSON.stringify({ error: 'This event does not sell tickets on RVA Now' }), {
+      return new Response(JSON.stringify({ error: 'This event does not sell tickets on Citipilot' }), {
         status: 400,
         headers: corsHeaders,
       });
@@ -113,14 +113,14 @@ Deno.serve(async (request) => {
     const params = new URLSearchParams({
       mode: 'payment',
       customer_email: String(buyer_email).trim(),
-      success_url: success_url ?? `rvanow://ticket-order?paid=1&order=${order.id}`,
-      cancel_url: cancel_url ?? `rvanow://event/${ticketType.event_slug}?paid=0`,
+      success_url: success_url ?? `citipilot://ticket-order?paid=1&order=${order.id}`,
+      cancel_url: cancel_url ?? `citipilot://event/${ticketType.event_slug}?paid=0`,
       'line_items[0][price_data][currency]': 'usd',
       'line_items[0][price_data][product_data][name]': `${event.title} — ${ticketType.name}`,
       'line_items[0][price_data][unit_amount]': String(ticketType.price_cents),
       'line_items[0][quantity]': String(qty),
       'line_items[1][price_data][currency]': 'usd',
-      'line_items[1][price_data][product_data][name]': 'RVA Now service fee',
+      'line_items[1][price_data][product_data][name]': 'Citipilot service fee',
       'line_items[1][price_data][unit_amount]': String(feeCents),
       'line_items[1][quantity]': '1',
       'payment_intent_data[application_fee_amount]': String(feeCents),

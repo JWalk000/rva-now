@@ -173,7 +173,7 @@ export default function SubmitScreen() {
         <View style={styles.field}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Sell tickets on RVA Now</Text>
+              <Text style={styles.label}>Sell tickets on Citipilot</Text>
               <Text style={styles.tierHint}>Only for your own event. Buyers pay $0.50 + 3.5% service fee per order.</Text>
             </View>
             <Switch

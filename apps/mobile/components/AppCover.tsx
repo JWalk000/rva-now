@@ -21,7 +21,7 @@ export function AppCover({ loading = true }: Props) {
         <View style={styles.bottomGlow} pointerEvents="none" />
 
         <View style={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
-          <Text style={styles.brand}>RVA NOW</Text>
+          <Text style={styles.brand}>CITIPILOT</Text>
 
           <View style={styles.center}>
             <Text style={styles.eyebrow}>Richmond, VA</Text>

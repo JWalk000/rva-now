@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 const PRICES: Record<string, { amount: number; name: string }> = {
-  featured: { amount: 2500, name: 'RVA Now Featured Listing' },
-  subscription: { amount: 5000, name: 'RVA Now Business Subscription (monthly)' },
+  featured: { amount: 2500, name: 'Citipilot Featured Listing' },
+  subscription: { amount: 5000, name: 'Citipilot Business Subscription (monthly)' },
 };
 
 function buildCheckoutParams(
@@ -19,8 +19,8 @@ function buildCheckoutParams(
 ) {
   const params = new URLSearchParams({
     mode: tier === 'subscription' ? 'subscription' : 'payment',
-    success_url: success_url ?? 'https://rva-now.local/success',
-    cancel_url: cancel_url ?? 'https://rva-now.local/cancel',
+    success_url: success_url ?? 'https://citipilot.local/success',
+    cancel_url: cancel_url ?? 'https://citipilot.local/cancel',
     'line_items[0][price_data][currency]': 'usd',
     'line_items[0][price_data][product_data][name]': price.name,
     'line_items[0][price_data][unit_amount]': String(price.amount),

@@ -28,13 +28,13 @@ import type { FeedPost } from '@/types/feed';
 import type { Place, PlaceCategory } from '@/types/place';
 import type { TicketTypeInput } from '@/types/ticket';
 
-const PREFS_KEY = 'rva-now-prefs';
-const SAVED_KEY = 'rva-now-saved';
-const DIGEST_KEY = 'rva-now-digest';
-const SUBMISSIONS_KEY = 'rva-now-submissions';
-const SUBMISSIONS_EMAIL_KEY = 'rva-now-submissions-email';
-const SAVED_PLACES_KEY = 'rva-now-saved-places';
-const ADDED_PLACES_KEY = 'rva-now-added-places';
+const PREFS_KEY = 'citipilot-prefs';
+const SAVED_KEY = 'citipilot-saved';
+const DIGEST_KEY = 'citipilot-digest';
+const SUBMISSIONS_KEY = 'citipilot-submissions';
+const SUBMISSIONS_EMAIL_KEY = 'citipilot-submissions-email';
+const SAVED_PLACES_KEY = 'citipilot-saved-places';
+const ADDED_PLACES_KEY = 'citipilot-added-places';
 
 type DataSource = 'supabase' | 'local';
 

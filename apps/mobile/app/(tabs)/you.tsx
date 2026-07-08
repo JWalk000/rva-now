@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchTicketsByEmail } from '@/lib/tickets';
 import type { Ticket } from '@/types/ticket';
 
-const TICKETS_EMAIL_KEY = 'rva-now-tickets-email';
+const TICKETS_EMAIL_KEY = 'citipilot-tickets-email';
 
 export default function YouScreen() {
   const insets = useSafeAreaInsets();

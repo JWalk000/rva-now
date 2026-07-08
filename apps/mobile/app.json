@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "RVA Now",
-    "slug": "rva-now",
+    "name": "Citipilot",
+    "slug": "citipilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rvanow",
+    "scheme": "citipilot",
     "userInterfaceStyle": "light",
     "description": "The fastest way to know what's happening in Richmond. Personalized local event discovery with maps, curated lists, and hidden gems.",
     "ios": {
       "supportsTablet": false,
       "associatedDomains": [
-        "applinks:rva-now.app"
+        "applinks:citipilot.app"
       ],
-      "bundleIdentifier": "com.rvanow.app",
+      "bundleIdentifier": "com.citipilot.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "RVA Now uses your location to show nearby events on the map.",
-        "NSCalendarsUsageDescription": "RVA Now adds events to your calendar when you tap Add to calendar.",
+        "NSLocationWhenInUseUsageDescription": "Citipilot uses your location to show nearby events on the map.",
+        "NSCalendarsUsageDescription": "Citipilot adds events to your calendar when you tap Add to calendar.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.rvanow.app",
+      "package": "com.citipilot.app",
       "adaptiveIcon": {
         "backgroundColor": "#F3F0EB",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -55,7 +55,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "RVA Now uses your location to show nearby events on the map."
+          "locationWhenInUsePermission": "Citipilot uses your location to show nearby events on the map."
         }
       ],
       "@react-native-community/datetimepicker"

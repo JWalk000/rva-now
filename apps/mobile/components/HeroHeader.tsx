@@ -28,7 +28,7 @@ export function HeroHeader({
         <View style={styles.overlay} pointerEvents="none" />
         <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
           <View style={styles.topBar}>
-            <Text style={styles.brand}>RVA NOW</Text>
+            <Text style={styles.brand}>CITIPILOT</Text>
             <View style={styles.actions}>
               <Link href="/auth" asChild>
                 <Pressable style={styles.iconBtn}>

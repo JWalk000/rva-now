@@ -1,4 +1,4 @@
-/** RVA Now platform fee: $0.50 per order + 3.5% of ticket subtotal */
+/** Citipilot platform fee: $0.50 per order + 3.5% of ticket subtotal */
 export function platformFeeCents(subtotalCents: number): number {
   return Math.round(subtotalCents * 0.035) + 50;
 }

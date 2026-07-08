@@ -41,7 +41,7 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Sign in to RVA Now</Text>
+      <Text style={styles.title}>Sign in to Citipilot</Text>
       <Text style={styles.copy}>Magic link — no password. Sync saves across devices.</Text>
       <TextInput
         style={styles.input}

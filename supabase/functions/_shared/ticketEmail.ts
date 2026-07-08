@@ -33,7 +33,7 @@ export function buildTicketEmailHtml(
 
   return `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;background:#f7f4ee;padding:24px;color:#1a1a1a;">
     <div style="max-width:520px;margin:0 auto;">
-      <h1 style="font-size:24px;margin:0 0 8px;">Your RVA Now tickets</h1>
+      <h1 style="font-size:24px;margin:0 0 8px;">Your Citipilot tickets</h1>
       <p style="color:#4a4540;margin:0 0 20px;">Show the QR code at the door or add tickets to Apple Wallet.</p>
       ${ticketBlocks}
       <p style="font-size:13px;color:#6b6560;">Questions? Reply to this email or contact the event organizer.</p>
@@ -47,7 +47,7 @@ export async function sendTicketEmail(
   html: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const resendKey = Deno.env.get('RESEND_API_KEY');
-  const fromEmail = Deno.env.get('TICKET_FROM_EMAIL') ?? Deno.env.get('DIGEST_FROM_EMAIL') ?? 'tickets@rva-now.local';
+  const fromEmail = Deno.env.get('TICKET_FROM_EMAIL') ?? Deno.env.get('DIGEST_FROM_EMAIL') ?? 'tickets@citipilot.local';
 
   if (!resendKey) {
     return { ok: false, error: 'RESEND_API_KEY not configured' };

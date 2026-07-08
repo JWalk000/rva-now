@@ -1,4 +1,4 @@
-# RVA Now — setup order (easiest → hardest)
+# Citipilot — setup order (easiest → hardest)
 
 Work through these in order. Check off as you go.
 
@@ -20,8 +20,8 @@ Work through these in order. Check off as you go.
 ## Step 2 — Auth magic links ✅ (automated)
 
 **Done via** `supabase/config.toml` + `npx supabase config push`:
-- Site URL: `rvanow://auth`
-- Redirect URLs: `rvanow://auth`, `exp://**`, `exp://**/--/auth`
+- Site URL: `citipilot://auth`
+- Redirect URLs: `citipilot://auth`, `exp://**`, `exp://**/--/auth`
 
 **Test:** App → **Account** → enter email → open magic link **on the same phone** → should show “Signed in”.
 
@@ -113,8 +113,8 @@ EVENTBRITE_ORG_IDS=org_id_1,org_id_2
 2. Add to `supabase/.env.sync`:
    ```
    RESEND_API_KEY=re_...
-   TICKET_FROM_EMAIL=RVA Now <tickets@yourdomain.com>
-   DIGEST_FROM_EMAIL=RVA Now <digest@yourdomain.com>
+   TICKET_FROM_EMAIL=Citipilot <tickets@yourdomain.com>
+   DIGEST_FROM_EMAIL=Citipilot <digest@yourdomain.com>
    ```
 3. Re-run `.\supabase\setup-ops-secrets.ps1`
 
@@ -136,7 +136,7 @@ Enroll at [developer.apple.com](https://developer.apple.com).
 
 ### 5b. App Store Connect
 
-Create app with bundle ID **`com.rvanow.app`**.
+Create app with bundle ID **`com.citipilot.app`**.
 
 ### 5c. Update `apps/mobile/eas.json`
 

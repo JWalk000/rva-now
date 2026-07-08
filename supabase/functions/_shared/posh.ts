@@ -51,7 +51,7 @@ export async function fetchPoshEvent(url: string): Promise<NormalizedIngestEvent
   if (!slug) return null;
 
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'RVA-Now-Ingest/1.0' },
+    headers: { 'User-Agent': 'Citipilot-Ingest/1.0' },
   });
 
   if (!response.ok) return null;

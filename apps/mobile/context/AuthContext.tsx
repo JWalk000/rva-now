@@ -7,7 +7,7 @@ import { registerForPushNotifications } from '@/lib/notifications';
 import { getSupabase } from '@/lib/supabase';
 import type { UserPrefs } from '@/types/event';
 
-const USERNAME_KEY = 'rva-now-username';
+const USERNAME_KEY = 'citipilot-username';
 
 type AuthContextValue = {
   user: User | null;

@@ -360,7 +360,7 @@ export const lists: CuratedList[] = [
   {
     id: 'date-night',
     title: 'Date night in RVA',
-    by: 'RVA Now',
+    by: 'Citipilot',
     description: 'Walkable dinners, drinks, and low-pressure plans.',
     items: ['Carytown Dessert Crawl', "Scott's Addition Rooftop Mixer", 'Church Hill Jazz Brunch'],
     eventSlugs: ['rva-002', 'rva-004', 'rva-015'],
@@ -368,7 +368,7 @@ export const lists: CuratedList[] = [
   {
     id: 'free-weekend',
     title: 'Free things this weekend',
-    by: 'RVA Now',
+    by: 'Citipilot',
     description: 'No cover, no excuse.',
     items: ["Sunset on Brown's Island", 'Church Hill Makers Market', 'Fan District Porch Sessions', 'Manchester Night Market'],
     eventSlugs: ['rva-001', 'rva-003', 'rva-005', 'rva-012'],
@@ -384,7 +384,7 @@ export const lists: CuratedList[] = [
   {
     id: 'after-work',
     title: 'Things to do after work',
-    by: 'RVA Now',
+    by: 'Citipilot',
     description: 'Weeknight-friendly and close to downtown.',
     items: ["Scott's Addition Rooftop Mixer", 'After-Work Trivia at Wonderland', 'Startup Coffee Chat'],
     eventSlugs: ['rva-004', 'rva-007', 'rva-013'],
@@ -400,7 +400,7 @@ export const lists: CuratedList[] = [
   {
     id: 'black-owned',
     title: 'Black-owned events & businesses',
-    by: 'RVA Now',
+    by: 'Citipilot',
     description: 'Support and discover local Black-owned happenings.',
     items: ['Manchester Night Market', 'Church Hill Jazz Brunch', 'Church Hill Makers Market'],
     eventSlugs: ['rva-012', 'rva-015', 'rva-003'],

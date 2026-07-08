@@ -47,7 +47,7 @@ export async function registerForPushNotifications(userId?: string) {
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'RVA Now',
+        name: 'Citipilot',
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }

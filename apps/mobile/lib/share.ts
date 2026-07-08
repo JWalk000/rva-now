@@ -3,7 +3,7 @@ import { Share } from 'react-native';
 import type { RvaEvent } from '@/types/event';
 
 export function eventDeepLink(eventId: string) {
-  return `rvanow://event/${eventId}`;
+  return `citipilot://event/${eventId}`;
 }
 
 export async function shareEvent(event: RvaEvent) {
@@ -15,7 +15,7 @@ export async function shareEvent(event: RvaEvent) {
     `${event.venue} · ${event.price}`,
     '',
     event.description,
-    `\nOpen in RVA Now: ${deepLink}`,
+    `\nOpen in Citipilot: ${deepLink}`,
     ticketLink ? `Tickets: ${ticketLink}` : '',
   ].join('\n');
 

@@ -51,7 +51,7 @@ export function TicketPurchase({ event }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Get Tickets On RVA Now</Text>
+      <Text style={styles.title}>Get Tickets On Citipilot</Text>
       <Text style={styles.hint}>Service fee: $0.50 + 3.5% per order — about half of Posh.</Text>
 
       {types.map((type) => (

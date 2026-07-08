@@ -1,7 +1,7 @@
 import type { SourcePlatform } from '@/types/event';
 
 export const platformLabels: Record<SourcePlatform, string> = {
-  manual: 'RVA Now',
+  manual: 'Citipilot',
   posh: 'Posh',
   eventbrite: 'Eventbrite',
   submission: 'Submission',

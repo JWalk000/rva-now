@@ -4,7 +4,7 @@ set CI=
 set EXPO_OFFLINE=
 echo.
 echo ============================================
-echo   RVA Now - Expo Go dev server
+echo   Citipilot - Expo Go dev server
 echo ============================================
 echo.
 echo When you see the login prompt:

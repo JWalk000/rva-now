@@ -2,10 +2,10 @@
 project_id = "edorsmasowlidwftzqnh"
 
 [auth]
-site_url = "rvanow://auth-callback"
+site_url = "citipilot://auth-callback"
 additional_redirect_urls = [
-  "rvanow://auth-callback",
-  "rvanow://auth",
+  "citipilot://auth-callback",
+  "citipilot://auth",
   "exp://**",
   "exp://**/--/auth-callback",
   "exp://**/--/auth",

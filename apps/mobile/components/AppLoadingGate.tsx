@@ -6,7 +6,7 @@ import { AppCover } from '@/components/AppCover';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 
-export const ONBOARDING_KEY = 'rva-now-onboarding-complete';
+export const ONBOARDING_KEY = 'citipilot-onboarding-complete';
 
 /** Never leave users on the cover forever if auth/storage hangs. */
 const FORCE_READY_MS = 2500;

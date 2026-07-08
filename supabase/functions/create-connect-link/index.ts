@@ -51,7 +51,7 @@ Deno.serve(async (request) => {
           email: normalizedEmail,
           'capabilities[card_payments][requested]': 'true',
           'capabilities[transfers][requested]': 'true',
-          'business_profile[product_description]': 'RVA Now event organizer',
+          'business_profile[product_description]': 'Citipilot event organizer',
         }),
       );
 
@@ -72,8 +72,8 @@ Deno.serve(async (request) => {
       'account_links',
       new URLSearchParams({
         account: account.stripe_account_id,
-        refresh_url: return_url ?? 'rvanow://submit?connect=refresh',
-        return_url: return_url ?? 'rvanow://submit?connect=done',
+        refresh_url: return_url ?? 'citipilot://submit?connect=refresh',
+        return_url: return_url ?? 'citipilot://submit?connect=done',
         type: 'account_onboarding',
       }),
     );
