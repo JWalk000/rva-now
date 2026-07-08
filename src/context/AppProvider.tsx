@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { createDigestSignup, createEventSubmission, fetchBusinessPlaces, fetchCuratedLists, fetchPublishedEvents } from '@/lib/api';
+import { createDigestSignup, createEventSubmission, createFeedPost, fetchBusinessPlaces, fetchCuratedLists, fetchFeedPosts, fetchPublishedEvents } from '@/lib/api';
 import { coordsForNeighborhood, filterPlacesByCategory, pullPlacesFromCommunity } from '@/lib/communityPlaces';
 import { events as localEvents, lists as localLists, neighborhoods, timeWindows, vibes } from '@/lib/data';
 import { feedPosts as localFeedPosts } from '@/lib/feedData';
@@ -28,7 +28,6 @@ import type { TicketTypeInput } from '@/types/ticket';
 const PREFS_KEY = 'citipilot-prefs';
 const SAVED_KEY = 'citipilot-saved';
 const SAVED_PLACES_KEY = 'citipilot-saved-places';
-const USER_POSTS_KEY = 'citipilot-user-posts';
 const MY_PLACE_IDS_KEY = 'citipilot-my-place-ids';
 const PENDING_PLACE_KEY = 'citipilot-pending-place';
 
@@ -92,7 +91,7 @@ type AppContextValue = {
   getPlacesByCategory: (category?: PlaceCategory | 'all') => Place[];
   toggleSavedPlace: (id: string) => void;
   isPlaceSaved: (id: string) => boolean;
-  createSocialPost: (input: CreateSocialPostInput) => FeedPost;
+  createSocialPost: (input: CreateSocialPostInput) => Promise<void>;
   savePendingBusinessPlace: (input: BusinessPlaceInput) => Place;
   refreshBusinessPlaces: () => Promise<Place[]>;
   refreshData: () => Promise<void>;
@@ -129,19 +128,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [digest, setDigest] = useState<DigestSignup | null>(null);
   const [events, setEvents] = useState<RvaEvent[]>(localEvents);
   const [lists, setLists] = useState<CuratedList[]>(localLists);
-  const [userPosts, setUserPosts] = useState<FeedPost[]>([]);
+  const [dbFeedPosts, setDbFeedPosts] = useState<FeedPost[]>([]);
   const [businessPlaces, setBusinessPlaces] = useState<Place[]>([]);
   const [myPlaceIds, setMyPlaceIds] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const socialPosts = useMemo(
-    () =>
-      [...userPosts, ...localFeedPosts].sort(
-        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-      ),
-    [userPosts],
-  );
+  const socialPosts = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: FeedPost[] = [];
+    for (const post of [...dbFeedPosts, ...localFeedPosts]) {
+      if (seen.has(post.id)) continue;
+      seen.add(post.id);
+      merged.push(post);
+    }
+    return merged.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }, [dbFeedPosts]);
 
   const places = useMemo(
     () =>
@@ -162,14 +164,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-      const [eventResult, listResult, dbPlaces] = await Promise.all([
+      const [eventResult, listResult, dbPlaces, feedPosts] = await Promise.all([
         fetchPublishedEvents(),
         fetchCuratedLists(),
         fetchBusinessPlaces(),
+        fetchFeedPosts(),
       ]);
       setEvents(eventResult.events);
       setLists(listResult.lists);
       setBusinessPlaces(dbPlaces);
+      setDbFeedPosts(feedPosts);
     } finally {
       setLoading(false);
     }
@@ -179,7 +183,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPrefs(readJson(PREFS_KEY, defaultPrefs));
     setSavedIds(readJson(SAVED_KEY, []));
     setSavedPlaceIds(readJson(SAVED_PLACES_KEY, []));
-    setUserPosts(readJson(USER_POSTS_KEY, []));
     setMyPlaceIds(readJson(MY_PLACE_IDS_KEY, []));
     void refreshData().finally(() => setReady(true));
   }, [refreshData]);
@@ -247,24 +250,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [places],
   );
 
-  const createSocialPost = useCallback((input: CreateSocialPostInput) => {
-    const post: FeedPost = {
-      ...input,
-      id: `user-post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      userName: input.userName?.trim() || 'You',
-      userHandle: input.userHandle?.trim() || 'you',
-      avatarColor: input.avatarColor || '#C44B2F',
-      createdAt: new Date().toISOString(),
-      likes: 0,
-      comments: 0,
-      shares: 0,
-    };
-    setUserPosts((current) => {
-      const next = [post, ...current];
-      localStorage.setItem(USER_POSTS_KEY, JSON.stringify(next));
-      return next;
-    });
-    return post;
+  const createSocialPost = useCallback(async (input: CreateSocialPostInput) => {
+    await createFeedPost(input);
   }, []);
 
   const savePendingBusinessPlace = useCallback((input: BusinessPlaceInput) => {

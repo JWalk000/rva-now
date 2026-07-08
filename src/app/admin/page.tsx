@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   fetchAdminDashboard,
   moderateBusinessPlace,
+  moderateFeedPost,
   verifyAdminSecret,
   type AdminDashboard,
 } from '@/lib/api';
@@ -75,7 +76,19 @@ export default function AdminPage() {
     setActionStatus('');
     try {
       await moderateBusinessPlace(secret, placeId, action);
-      setActionStatus(`${action === 'approve' ? 'Approved' : 'Rejected'} ${placeId}`);
+      setActionStatus(`${action === 'approve' ? 'Approved' : 'Rejected'} place ${placeId}`);
+      await loadDashboard(secret);
+    } catch (err) {
+      setActionStatus(err instanceof Error ? err.message : 'Action failed');
+    }
+  }
+
+  async function handleModerateFeed(postId: string, action: 'approve' | 'reject') {
+    if (!secret) return;
+    setActionStatus('');
+    try {
+      await moderateFeedPost(secret, postId, action);
+      setActionStatus(`${action === 'approve' ? 'Approved' : 'Rejected'} feed post`);
       await loadDashboard(secret);
     } catch (err) {
       setActionStatus(err instanceof Error ? err.message : 'Action failed');
@@ -91,7 +104,7 @@ export default function AdminPage() {
             Admin
           </h1>
           <p className="mt-2 text-sm text-[#5A5560]">
-            Enter your admin secret to moderate business listings and view stats.
+            Enter your admin secret to moderate business listings, feed posts, and view stats.
           </p>
           <form onSubmit={(e) => void handleLogin(e)} className="mt-8 space-y-4">
             <label className="block">
@@ -155,12 +168,14 @@ export default function AdminPage() {
         {actionStatus ? <p className="text-sm font-semibold text-[#2F6B52]">{actionStatus}</p> : null}
         {error ? <p className="text-sm font-semibold text-[#9E3A24]">{error}</p> : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {[
             { label: 'Total places', value: stats?.totalPlaces ?? 0 },
             { label: 'Active listings', value: stats?.activePlaces ?? 0 },
-            { label: 'Pending approval', value: stats?.pendingPlaces ?? 0 },
+            { label: 'Pending places', value: stats?.pendingPlaces ?? 0 },
             { label: 'Published events', value: stats?.eventCount ?? 0 },
+            { label: 'Pending feed posts', value: stats?.pendingFeedPosts ?? 0 },
+            { label: 'Approved feed posts', value: stats?.approvedFeedPosts ?? 0 },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-[#DED8D0] bg-white p-5">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A8490]">{item.label}</p>
@@ -173,7 +188,71 @@ export default function AdminPage() {
 
         <section className="rounded-2xl border border-[#DED8D0] bg-white p-5">
           <h2 className="font-[family-name:var(--font-display)] text-xl font-extrabold text-[#14121A]">
-            Pending approval
+            Feed posts pending
+          </h2>
+          <p className="mt-1 text-sm text-[#5A5560]">Community posts awaiting moderation.</p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#DED8D0] text-xs font-bold uppercase tracking-[0.12em] text-[#8A8490]">
+                  <th className="py-3 pr-4">User</th>
+                  <th className="py-3 pr-4">Caption</th>
+                  <th className="py-3 pr-4">Neighborhood</th>
+                  <th className="py-3 pr-4">Created</th>
+                  <th className="py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dashboard?.pendingFeed ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-[#5A5560]">
+                      No pending feed posts.
+                    </td>
+                  </tr>
+                ) : (
+                  dashboard?.pendingFeed.map((post) => (
+                    <tr key={post.id} className="border-b border-[#EFEAE3]">
+                      <td className="py-3 pr-4 font-semibold text-[#14121A]">
+                        {post.user_name}
+                        <span className="block text-xs font-normal text-[#8A8490]">@{post.user_handle}</span>
+                      </td>
+                      <td className="max-w-xs py-3 pr-4 text-[#5A5560]">
+                        <span className="line-clamp-2">{post.caption}</span>
+                        {post.place_name ? (
+                          <span className="mt-1 block text-xs text-[#8A8490]">📍 {post.place_name}</span>
+                        ) : null}
+                      </td>
+                      <td className="py-3 pr-4 text-[#5A5560]">{post.neighborhood}</td>
+                      <td className="py-3 pr-4 text-[#5A5560]">{formatDate(post.created_at)}</td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleModerateFeed(post.id, 'approve')}
+                            className="rounded-md bg-[#2F6B52] px-3 py-1.5 text-xs font-bold text-white"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleModerateFeed(post.id, 'reject')}
+                            className="rounded-md bg-[#9E3A24] px-3 py-1.5 text-xs font-bold text-white"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#DED8D0] bg-white p-5">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-extrabold text-[#14121A]">
+            Pending business listings
           </h2>
           <p className="mt-1 text-sm text-[#5A5560]">Paid listings awaiting moderation (if auto-approve is off).</p>
           <div className="mt-4 overflow-x-auto">

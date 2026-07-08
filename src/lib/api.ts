@@ -13,6 +13,7 @@ import type {
   TimeWindow,
 } from '@/types/event';
 import type { TicketTypeInput } from '@/types/ticket';
+import type { FeedActivity, FeedPost } from '@/types/feed';
 
 type DbEvent = {
   slug: string;
@@ -345,6 +346,8 @@ export type AdminDashboard = {
     activePlaces: number;
     pendingPlaces: number;
     eventCount: number;
+    pendingFeedPosts: number;
+    approvedFeedPosts: number;
   };
   pending: Array<{
     id: string;
@@ -368,6 +371,28 @@ export type AdminDashboard = {
     approved: boolean;
     created_at: string;
     stripe_subscription_id: string | null;
+  }>;
+  pendingFeed: Array<{
+    id: string;
+    user_name: string;
+    user_handle: string;
+    caption: string;
+    neighborhood: string;
+    activity: string;
+    place_name: string | null;
+    status: string;
+    created_at: string;
+  }>;
+  approvedFeed: Array<{
+    id: string;
+    user_name: string;
+    user_handle: string;
+    caption: string;
+    neighborhood: string;
+    activity: string;
+    place_name: string | null;
+    status: string;
+    created_at: string;
   }>;
 };
 
@@ -420,6 +445,123 @@ export async function moderateBusinessPlace(
   if (!res.ok) throw new Error(json.error ?? 'Moderation failed');
 }
 
+export async function moderateFeedPost(
+  secret: string,
+  postId: string,
+  action: 'approve' | 'reject',
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error('Supabase URL not configured');
+  const res = await fetch(`${url}/functions/v1/approve-feed-post`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-secret': secret,
+    },
+    body: JSON.stringify({ post_id: postId, action }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Moderation failed');
+}
+
 export function isBackendConfigured() {
   return isSupabaseConfigured();
+}
+
+type DbFeedPost = {
+  id: string;
+  user_name: string;
+  user_handle: string;
+  avatar_color: string;
+  caption: string;
+  activity: FeedActivity;
+  place_id: string | null;
+  place_name: string | null;
+  place_category: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  event_title: string | null;
+  neighborhood: string;
+  image_url: string | null;
+  image_color: string;
+  image_emoji: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  status: string;
+  created_at: string;
+};
+
+function mapFeedPost(row: DbFeedPost): FeedPost {
+  return {
+    id: row.id,
+    userName: row.user_name,
+    userHandle: row.user_handle,
+    avatarColor: row.avatar_color,
+    caption: row.caption,
+    activity: row.activity,
+    placeId: row.place_id ?? undefined,
+    placeName: row.place_name ?? undefined,
+    placeCategory: (row.place_category as PlaceCategory) ?? undefined,
+    placeLat: row.place_lat ?? undefined,
+    placeLng: row.place_lng ?? undefined,
+    eventTitle: row.event_title ?? undefined,
+    neighborhood: row.neighborhood,
+    imageUrl: row.image_url ?? undefined,
+    imageColor: row.image_color,
+    imageEmoji: row.image_emoji,
+    likes: row.likes,
+    comments: row.comments,
+    shares: row.shares,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchFeedPosts(): Promise<FeedPost[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('feed_posts')
+    .select('*')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false });
+
+  if (error || !data?.length) return [];
+  return data.map((row) => mapFeedPost(row as DbFeedPost));
+}
+
+export type CreateFeedPostInput = Omit<
+  FeedPost,
+  'id' | 'createdAt' | 'likes' | 'comments' | 'shares' | 'userName' | 'userHandle' | 'avatarColor'
+> & {
+  userName?: string;
+  userHandle?: string;
+  avatarColor?: string;
+};
+
+export async function createFeedPost(input: CreateFeedPostInput): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error('Backend not configured');
+
+  const { error } = await supabase.from('feed_posts').insert({
+    user_name: input.userName?.trim() || 'You',
+    user_handle: input.userHandle?.trim() || 'you',
+    avatar_color: input.avatarColor || '#C44B2F',
+    caption: input.caption,
+    activity: input.activity,
+    place_id: input.placeId ?? null,
+    place_name: input.placeName ?? null,
+    place_category: input.placeCategory ?? null,
+    place_lat: input.placeLat ?? null,
+    place_lng: input.placeLng ?? null,
+    event_title: input.eventTitle ?? null,
+    neighborhood: input.neighborhood,
+    image_url: input.imageUrl ?? null,
+    image_color: input.imageColor,
+    image_emoji: input.imageEmoji,
+    status: 'pending',
+  });
+
+  if (error) throw new Error(error.message);
 }

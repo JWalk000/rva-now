@@ -18,11 +18,12 @@ export type CreatePostInput = CreateSocialPostInput;
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (post: CreatePostInput) => void;
+  onSubmit: (post: CreatePostInput) => void | Promise<void>;
   places: Place[];
+  submitting?: boolean;
 };
 
-export function CreatePostModal({ open, onClose, onSubmit, places }: Props) {
+export function CreatePostModal({ open, onClose, onSubmit, places, submitting = false }: Props) {
   const titleId = useId();
   const [caption, setCaption] = useState('');
   const [activity, setActivity] = useState<FeedActivity>('recommends');
@@ -57,6 +58,10 @@ export function CreatePostModal({ open, onClose, onSubmit, places }: Props) {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) reset();
+  }, [open]);
+
   if (!open) return null;
 
   function reset() {
@@ -79,6 +84,7 @@ export function CreatePostModal({ open, onClose, onSubmit, places }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     const trimmed = caption.trim();
     if (!trimmed) {
       setError('Add a caption to share what’s happening.');
@@ -126,9 +132,13 @@ export function CreatePostModal({ open, onClose, onSubmit, places }: Props) {
       post.placeEmoji = imageEmoji;
     }
 
-    onSubmit(post);
-    reset();
-    onClose();
+    void (async () => {
+      try {
+        await onSubmit(post);
+      } catch {
+        // Parent handles error display
+      }
+    })();
   }
 
   return (
@@ -303,9 +313,10 @@ export function CreatePostModal({ open, onClose, onSubmit, places }: Props) {
             </button>
             <button
               type="submit"
-              className="rounded-full bg-[#C44B2F] px-5 py-3 text-sm font-extrabold text-white transition hover:bg-[#9E3A24]"
+              disabled={submitting}
+              className="rounded-full bg-[#C44B2F] px-5 py-3 text-sm font-extrabold text-white transition hover:bg-[#9E3A24] disabled:opacity-60"
             >
-              Share post
+              {submitting ? 'Submitting…' : 'Share post'}
             </button>
           </div>
         </form>

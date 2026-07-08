@@ -12,6 +12,8 @@ export default function FeedPage() {
   const { socialPosts, places, createSocialPost } = useApp();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('For You');
   const [composeOpen, setComposeOpen] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const posts = useMemo(() => {
     if (filter === 'Events') return socialPosts.filter((post) => post.eventTitle);
@@ -34,6 +36,12 @@ export default function FeedPage() {
           <p className="mt-2 max-w-2xl text-sm text-white/65">
             What people are doing around RVA — posts pin places onto the map.
           </p>
+
+          {submitMessage ? (
+            <p className="mt-4 rounded-xl border border-[#2F6B52]/40 bg-[#2F6B52]/20 px-4 py-3 text-sm font-semibold text-[#A8E6C3]">
+              {submitMessage}
+            </p>
+          ) : null}
 
           <button
             type="button"
@@ -94,9 +102,20 @@ export default function FeedPage() {
         open={composeOpen}
         onClose={() => setComposeOpen(false)}
         places={places}
-        onSubmit={(input) => {
-          createSocialPost(input);
+        onSubmit={async (input) => {
+          setSubmitting(true);
+          setSubmitMessage('');
+          try {
+            await createSocialPost(input);
+            setComposeOpen(false);
+            setSubmitMessage('Post submitted for review. It will appear in the feed once approved.');
+          } catch (err) {
+            setSubmitMessage(err instanceof Error ? err.message : 'Could not submit post.');
+          } finally {
+            setSubmitting(false);
+          }
         }}
+        submitting={submitting}
       />
     </div>
   );
