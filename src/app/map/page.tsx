@@ -76,6 +76,7 @@ export default function MapPage() {
   const [locStatus, setLocStatus] = useState<LocStatus>('idle');
   const [searchRadius, setSearchRadius] = useState(RADIUS_DEFAULT);
   const [recenterToken, setRecenterToken] = useState(0);
+  const [showAllRvaToken, setShowAllRvaToken] = useState(0);
   const watchIdRef = useRef<number | null>(null);
 
   const persistLocation = useCallback((loc: UserLocation) => {
@@ -254,6 +255,13 @@ export default function MapPage() {
                 Recenter
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setShowAllRvaToken((n) => n + 1)}
+              className="rounded-full border border-white/20 px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10"
+            >
+              Show all RVA
+            </button>
           </div>
 
           {locationMessage ? (
@@ -266,8 +274,8 @@ export default function MapPage() {
             </p>
           ) : null}
           {locStatus === 'ready' && userLocation ? (
-            <p className="mt-3 text-xs text-white/50">
-              Showing spots within {searchRadius} mi of your location.
+            <p className="mt-3 text-xs font-semibold text-[#93C5FD]">
+              Centered on you · showing spots within {searchRadius} mi
             </p>
           ) : null}
 
@@ -405,13 +413,20 @@ export default function MapPage() {
       <div className="relative min-h-[62vh] flex-1 lg:min-h-0">
         <MapView
           markers={visible}
+          allMarkers={markers}
           selected={selected}
           onSelect={(marker) => setSelected({ type: marker.type, id: marker.id })}
           userLocation={userLocation}
           locationPending={locationPending}
           searchRadiusMiles={searchRadius}
           recenterToken={recenterToken}
+          showAllRvaToken={showAllRvaToken}
         />
+        {process.env.NODE_ENV === 'development' && userLocation ? (
+          <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-lg bg-black/70 px-2.5 py-1.5 font-mono text-[10px] text-white/80">
+            {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+          </div>
+        ) : null}
         {locStatus === 'ready' ? (
           <button
             type="button"

@@ -22,6 +22,12 @@ export function sortByDistance<T extends LatLng>(items: T[], location: UserLocat
   return [...items].sort((a, b) => distanceMiles(a, location) - distanceMiles(b, location));
 }
 
+/** Downtown Richmond — city-level zoom keeps Ashland off the basemap tiles. */
+export const RVA_CENTER: [number, number] = [37.5407, -77.436];
+export const CITY_ZOOM = 14;
+/** Zoom when centered on the user — tight enough to stay in Richmond proper. */
+export const USER_LOCATION_ZOOM = 14;
+
 /** Leaflet zoom level that roughly frames a circular search radius around the user. */
 export function zoomForRadiusMiles(miles: number): number {
   const clamped = Math.max(1, Math.min(25, miles));

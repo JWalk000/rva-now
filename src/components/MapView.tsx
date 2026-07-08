@@ -6,7 +6,12 @@ import { Circle, CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { zoomForRadiusMiles, type UserLocation } from '@/lib/location';
+import {
+  CITY_ZOOM,
+  RVA_CENTER,
+  USER_LOCATION_ZOOM,
+  type UserLocation,
+} from '@/lib/location';
 
 export type MapMarker = {
   type: 'event' | 'place';
@@ -22,17 +27,18 @@ export type MapMarker = {
 
 type Props = {
   markers: MapMarker[];
+  /** Full marker set for optional "Show all RVA" fitBounds — never used automatically. */
+  allMarkers?: MapMarker[];
   selected: { type: 'event' | 'place'; id: string } | null;
   onSelect: (marker: MapMarker) => void;
   userLocation?: UserLocation | null;
-  /** True while geolocation is still resolving — skip fitBounds on markers. */
+  /** True while geolocation is still resolving — hold downtown center. */
   locationPending?: boolean;
   searchRadiusMiles?: number;
   recenterToken?: number;
+  /** Increment to explicitly fit all RVA markers (user tap only). */
+  showAllRvaToken?: number;
 };
-
-const RVA_CENTER: [number, number] = [37.5407, -77.436];
-const DEFAULT_ZOOM = 13;
 
 function makeIcon(type: 'event' | 'place', active: boolean) {
   const color = active ? '#C44B2F' : type === 'event' ? '#D4922A' : '#2F6B52';
@@ -54,69 +60,79 @@ function makeIcon(type: 'event' | 'place', active: boolean) {
 }
 
 function MapCamera({
-  markers,
+  allMarkers,
   userLocation,
   locationPending,
-  searchRadiusMiles = 5,
   recenterToken,
+  showAllRvaToken,
 }: {
-  markers: MapMarker[];
+  allMarkers: MapMarker[];
   userLocation?: UserLocation | null;
   locationPending?: boolean;
-  searchRadiusMiles?: number;
   recenterToken?: number;
+  showAllRvaToken?: number;
 }) {
   const map = useMap();
   const userCenteredRef = useRef(false);
+  const lastRecenterTokenRef = useRef(0);
+  const lastShowAllTokenRef = useRef(0);
 
-  // Center on user whenever we have a location (initial fix, recenter, radius change).
-  useEffect(() => {
-    if (!userLocation) return;
-    const zoom = zoomForRadiusMiles(searchRadiusMiles);
-    map.setView([userLocation.lat, userLocation.lng], zoom, { animate: userCenteredRef.current });
-    userCenteredRef.current = true;
-  }, [map, userLocation?.lat, userLocation?.lng, searchRadiusMiles]);
-
-  // Explicit recenter button — always animate.
-  useEffect(() => {
-    if (!userLocation || (recenterToken ?? 0) === 0) return;
-    const zoom = zoomForRadiusMiles(searchRadiusMiles);
-    map.setView([userLocation.lat, userLocation.lng], zoom, { animate: true });
-    userCenteredRef.current = true;
-  }, [map, userLocation, recenterToken, searchRadiusMiles]);
-
-  // Without user location: wait for geolocation before fitting markers (prevents Ashland jump).
+  // Default: downtown Richmond at city zoom — never auto-fit markers.
   useEffect(() => {
     if (userLocation || userCenteredRef.current) return;
-    if (locationPending) {
-      map.setView(RVA_CENTER, DEFAULT_ZOOM, { animate: false });
-      return;
-    }
+    map.setView(RVA_CENTER, CITY_ZOOM, { animate: false });
+  }, [map, userLocation, locationPending]);
 
-    const valid = markers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
+  // Center on user at first fix and on explicit recenter only (not radius/filter changes).
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const isRecenter = (recenterToken ?? 0) > lastRecenterTokenRef.current;
+    const isFirstFix = !userCenteredRef.current;
+
+    if (!isFirstFix && !isRecenter) return;
+
+    if (isRecenter) lastRecenterTokenRef.current = recenterToken ?? 0;
+
+    map.flyTo([userLocation.lat, userLocation.lng], USER_LOCATION_ZOOM, {
+      animate: isRecenter,
+      duration: isRecenter ? 0.8 : 0,
+    });
+    userCenteredRef.current = true;
+  }, [map, userLocation?.lat, userLocation?.lng, recenterToken]);
+
+  // Explicit "Show all RVA" — only path that calls fitBounds.
+  useEffect(() => {
+    const token = showAllRvaToken ?? 0;
+    if (token === 0 || token === lastShowAllTokenRef.current) return;
+    lastShowAllTokenRef.current = token;
+
+    const valid = allMarkers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
     if (!valid.length) {
-      map.setView(RVA_CENTER, DEFAULT_ZOOM);
+      map.setView(RVA_CENTER, CITY_ZOOM);
       return;
     }
     if (valid.length === 1) {
-      map.setView([valid[0].lat, valid[0].lng], 14);
+      map.setView([valid[0].lat, valid[0].lng], CITY_ZOOM);
       return;
     }
     const bounds = L.latLngBounds(valid.map((m) => [m.lat, m.lng] as [number, number]));
-    map.fitBounds(bounds.pad(0.12), { animate: false, maxZoom: 13 });
-  }, [map, markers, userLocation, locationPending]);
+    map.fitBounds(bounds.pad(0.08), { animate: true, maxZoom: CITY_ZOOM });
+  }, [map, allMarkers, showAllRvaToken]);
 
   return null;
 }
 
 export default function MapView({
   markers,
+  allMarkers,
   selected,
   onSelect,
   userLocation,
   locationPending = false,
   searchRadiusMiles = 5,
   recenterToken = 0,
+  showAllRvaToken = 0,
 }: Props) {
   const icons = useMemo(() => {
     return {
@@ -127,10 +143,11 @@ export default function MapView({
     };
   }, []);
 
+  const boundsMarkers = allMarkers ?? markers;
   const initialCenter: [number, number] = userLocation
     ? [userLocation.lat, userLocation.lng]
     : RVA_CENTER;
-  const initialZoom = userLocation ? zoomForRadiusMiles(searchRadiusMiles) : DEFAULT_ZOOM;
+  const initialZoom = userLocation ? USER_LOCATION_ZOOM : CITY_ZOOM;
   const radiusMeters = searchRadiusMiles * 1609.34;
 
   return (
@@ -146,11 +163,11 @@ export default function MapView({
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
       <MapCamera
-        markers={markers}
+        allMarkers={boundsMarkers}
         userLocation={userLocation}
         locationPending={locationPending}
-        searchRadiusMiles={searchRadiusMiles}
         recenterToken={recenterToken}
+        showAllRvaToken={showAllRvaToken}
       />
       {userLocation ? (
         <>
