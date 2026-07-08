@@ -16,6 +16,9 @@ Submit tab → pick tier → submit form
 | **Free** | $0 | Standard listing after manual review |
 | **Featured** | $25 one-time | `featured` + `sponsored` flags, top of feed |
 | **Subscription** | $50/month | Same as featured + recurring priority |
+| **Place monthly** (`place_monthly` / `business_place`) | $5/month | Business place listing on web map / Around Town |
+
+Place subscriptions use dynamic `price_data` (500 cents, monthly). Success URLs typically return to `/you?business=1&paid=1`. They do **not** update `event_submissions`.
 
 Code lives in:
 - `supabase/functions/create-checkout` — starts Stripe Checkout
