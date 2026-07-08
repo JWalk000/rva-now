@@ -35,8 +35,12 @@ Deno.serve(async (request) => {
       { count: activePlaces },
       { count: pendingPlaces },
       { count: eventCount },
+      { count: pendingFeedPosts },
+      { count: approvedFeedPosts },
       { data: pending },
       { data: active },
+      { data: pendingFeed },
+      { data: approvedFeed },
     ] = await Promise.all([
       supabase.from('business_places').select('*', { count: 'exact', head: true }),
       supabase
@@ -50,6 +54,8 @@ Deno.serve(async (request) => {
         .eq('approved', false)
         .not('stripe_subscription_id', 'is', null),
       supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'published'),
+      supabase.from('feed_posts').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('feed_posts').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
       supabase
         .from('business_places')
         .select('id, name, email, neighborhood, category, subcategory, status, approved, created_at')
@@ -64,6 +70,18 @@ Deno.serve(async (request) => {
         .eq('approved', true)
         .order('created_at', { ascending: false })
         .limit(50),
+      supabase
+        .from('feed_posts')
+        .select('id, user_name, user_handle, caption, neighborhood, activity, place_name, status, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('feed_posts')
+        .select('id, user_name, user_handle, caption, neighborhood, activity, place_name, status, created_at')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(50),
     ]);
 
     return new Response(
@@ -73,9 +91,13 @@ Deno.serve(async (request) => {
           activePlaces: activePlaces ?? 0,
           pendingPlaces: pendingPlaces ?? 0,
           eventCount: eventCount ?? 0,
+          pendingFeedPosts: pendingFeedPosts ?? 0,
+          approvedFeedPosts: approvedFeedPosts ?? 0,
         },
         pending: pending ?? [],
         active: active ?? [],
+        pendingFeed: pendingFeed ?? [],
+        approvedFeed: approvedFeed ?? [],
       }),
       { headers: corsHeaders },
     );
