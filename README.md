@@ -1,8 +1,8 @@
-# RVA Now — Website
+# Citipilot — Website
 
-Standalone website for [RVA Now](https://rva-now.app): Richmond event and place discovery.
+Standalone website for [Citipilot](https://citipilot.app): Richmond event and place discovery.
 
-This project is **fully independent** from the mobile app. The Expo app (`rva-now/apps/mobile`) was used only as a **design and feature reference** when this site was built. There is no shared code, no monorepo imports, and no runtime coupling between the two.
+This project is **fully independent** from the mobile app. The Expo app (`rva-now/apps/mobile`) was used only as a **design and feature reference** when this site was built.
 
 ## Features
 

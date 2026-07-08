@@ -1,6 +1,6 @@
 # Mobile app reference (read-only)
 
-The RVA Now **mobile app** lives in a separate project:
+The Citipilot **mobile app** lives in a separate project:
 
 ```
 ../rva-now/apps/mobile/

@@ -1,14 +1,14 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — RVA Now',
+  title: 'Privacy Policy — Citipilot',
 };
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#F3F0EB] px-5 py-10 text-[#14121A]">
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="text-sm font-bold text-[#C44B2F] underline">← Back to RVA Now</Link>
+        <Link href="/" className="text-sm font-bold text-[#C44B2F] underline">← Back to Citipilot</Link>
         <h1 className="mt-6 text-4xl font-extrabold">Privacy Policy</h1>
         <p className="mt-2 text-sm text-[#5A5560]">Last updated: July 8, 2026</p>
 
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#14121A]">Who we are</h2>
             <p className="mt-2 leading-relaxed">
-              RVA Now (&quot;we&quot;, &quot;us&quot;) operates a local discovery platform for Richmond, Virginia.
+              Citipilot (&quot;we&quot;, &quot;us&quot;) operates a local discovery platform for Richmond, Virginia.
               We help people find events, places, and community activity through our website and mobile app.
             </p>
           </section>
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#14121A]">Contact</h2>
             <p className="mt-2 leading-relaxed">
-              Questions about this policy: <a href="mailto:hello@rva-now.app" className="text-[#C44B2F] underline">hello@rva-now.app</a>
+              Questions about this policy: <a href="mailto:hello@citipilot.app" className="text-[#C44B2F] underline">hello@citipilot.app</a>
             </p>
           </section>
         </div>

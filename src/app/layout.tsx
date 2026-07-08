@@ -6,14 +6,14 @@ import { AppProvider } from '@/context/AppProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'RVA Now — Discover Richmond Events & Places',
+  title: 'Citipilot — Discover Richmond Events & Places',
   description:
     'The fastest way to know what is happening in Richmond. Personalized local event discovery with maps, curated lists, and community places.',
-  metadataBase: new URL('https://rva-now.app'),
+  metadataBase: new URL('https://citipilot.app'),
   openGraph: {
-    title: 'RVA Now',
+    title: 'Citipilot',
     description: 'Discover events, places, and what RVA is doing right now.',
-    siteName: 'RVA Now',
+    siteName: 'Citipilot',
     locale: 'en_US',
     type: 'website',
   },

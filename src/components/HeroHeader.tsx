@@ -23,7 +23,7 @@ export function HeroHeader({
       <div className="absolute inset-0 bg-[rgba(7,6,10,0.62)]" />
       <div className="relative z-10 px-5 pb-5 pt-6">
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-xs font-extrabold tracking-[0.24em] text-white/75">RVA NOW</span>
+          <span className="text-xs font-extrabold tracking-[0.24em] text-white/75">CITIPILOT</span>
           <div className="flex gap-2">
             <Link
               href="/you"

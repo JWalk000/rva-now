@@ -1,14 +1,14 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Terms of Service — RVA Now',
+  title: 'Terms of Service — Citipilot',
 };
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-[#F3F0EB] px-5 py-10 text-[#14121A]">
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="text-sm font-bold text-[#C44B2F] underline">← Back to RVA Now</Link>
+        <Link href="/" className="text-sm font-bold text-[#C44B2F] underline">← Back to Citipilot</Link>
         <h1 className="mt-6 text-4xl font-extrabold">Terms of Service</h1>
         <p className="mt-2 text-sm text-[#5A5560]">Last updated: July 8, 2026</p>
 
@@ -16,7 +16,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#14121A]">Service</h2>
             <p className="mt-2 leading-relaxed">
-              RVA Now provides a platform for discovering local events and places in Richmond, Virginia.
+              Citipilot provides a platform for discovering local events and places in Richmond, Virginia.
               Organizers may submit listings and purchase featured placement or ticketing services.
             </p>
           </section>
@@ -40,7 +40,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#14121A]">Contact</h2>
             <p className="mt-2 leading-relaxed">
-              Support: <a href="mailto:hello@rva-now.app" className="text-[#C44B2F] underline">hello@rva-now.app</a>
+              Support: <a href="mailto:hello@citipilot.app" className="text-[#C44B2F] underline">hello@citipilot.app</a>
             </p>
           </section>
         </div>

@@ -25,9 +25,9 @@ import type { FeedPost } from '@/types/feed';
 import type { Place, PlaceCategory } from '@/types/place';
 import type { TicketTypeInput } from '@/types/ticket';
 
-const PREFS_KEY = 'rva-now-prefs';
-const SAVED_KEY = 'rva-now-saved';
-const SAVED_PLACES_KEY = 'rva-now-saved-places';
+const PREFS_KEY = 'citipilot-prefs';
+const SAVED_KEY = 'citipilot-saved';
+const SAVED_PLACES_KEY = 'citipilot-saved-places';
 
 const defaultPrefs: UserPrefs = {
   neighborhoods: ["The Fan", "Scott's Addition", 'Carytown'],
